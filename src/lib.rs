@@ -5,18 +5,14 @@ mod proxy;
 mod tunnel;
 
 use std::{
-    collections::{hash_map::DefaultHasher, HashMap},
-    hash::{Hash, Hasher},
     io::Read,
-    process::{self, Command, Stdio},
-    sync::{Arc, Mutex, MutexGuard},
+    process::{self, Command, ExitStatus, Stdio},
+    sync::{Arc, Mutex},
 };
 
 use dashboard::build_kubernetes_dashboard_option;
 use proxy::build_fetch_load_balancers_option;
-use sysinfo::{ProcessExt, System, SystemExt};
-
-pub type AlreadyStartedCommands = Arc<Mutex<HashMap<u64, Arc<Mutex<process::Child>>>>>;
+use sysinfo::{ProcessExt, ProcessRefreshKind, RefreshKind, System, SystemExt};
 
 type CommandExecutionResult = Result<CommandResultType, String>;
 
@@ -27,12 +23,12 @@ pub use proxy::{create_load_balancer, fetch_load_balancers};
 pub use tunnel::create_minikube_tunnel;
 
 pub enum CommandResultType {
-    ChildProcess(Option<(Arc<Mutex<process::Child>>, u64)>),
+    ChildProcess(Option<(Arc<Mutex<process::Child>>, ExitStatus)>),
     PrintableResults(Vec<String>),
 }
 
 impl CommandResultType {
-    fn child_process(self) -> Option<(Arc<Mutex<process::Child>>, u64)> {
+    fn child_process(self) -> Option<(Arc<Mutex<process::Child>>, ExitStatus)> {
         match self {
             ChildProcess(maybe_child) => maybe_child,
             PrintableResults(_) => {
@@ -66,44 +62,24 @@ pub fn verify_dependencies() -> Result<(), String> {
     Ok(())
 }
 
-pub fn build_options(
-    already_started_commands: AlreadyStartedCommands,
-    sysinfo: Arc<Mutex<System>>,
-) -> Result<Vec<(String, OptionFunc)>, String> {
+pub fn build_options() -> Result<Vec<(String, OptionFunc)>, String> {
     Ok(vec![
-        build_kubernetes_dashboard_option(Arc::clone(&already_started_commands))?,
-        build_minikube_tunnel_option(Arc::clone(&already_started_commands), Arc::clone(&sysinfo))?,
+        build_kubernetes_dashboard_option()?,
+        build_minikube_tunnel_option()?,
         build_fetch_load_balancers_option()?,
     ])
 }
 
-pub fn refresh_sysinfo(sysinfo: &Arc<Mutex<System>>) -> MutexGuard<System> {
-    let mut sysinfo = sysinfo.lock().unwrap();
-    sysinfo.refresh_processes();
-    sysinfo
+pub fn get_sysinfo() -> System {
+    System::new_with_specifics(RefreshKind::new().with_processes(ProcessRefreshKind::everything()))
 }
 
-fn start_process(
+fn start_and_wait_process(
     command: &str,
     args: &[&str],
     custom_error: Option<String>,
-    already_started_commands: AlreadyStartedCommands,
 ) -> CommandExecutionResult {
-    let command_hash = {
-        let mut hasher = DefaultHasher::new();
-        command.hash(&mut hasher);
-        args.iter().for_each(|x| x.hash(&mut hasher));
-        hasher.finish()
-    };
-
-    let already_started_commands = already_started_commands.lock().unwrap();
-    let already_started_child = already_started_commands.get(&command_hash);
-
-    if let Some(entry) = already_started_child {
-        return Ok(ChildProcess(Some((Arc::clone(entry), command_hash))));
-    }
-
-    let child = Command::new(command)
+    let mut child = Command::new(command)
         .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -117,19 +93,22 @@ fn start_process(
             }
         })?;
 
-    Ok(ChildProcess(Some((
-        Arc::new(Mutex::new(child)),
-        command_hash,
-    ))))
+    match child.wait().map_err(|x| x.to_string()) {
+        Ok(exit_status) => Ok(ChildProcess(Some((
+            Arc::new(Mutex::new(child)),
+            exit_status,
+        )))),
+        Err(error) => Err(error),
+    }
 }
 
-fn kill_process(name: &str, pattern: &str, sysinfo: Arc<Mutex<System>>) -> CommandExecutionResult {
-    let sysinfo = refresh_sysinfo(&sysinfo);
+fn kill_process(name: &str, pattern: &str) -> CommandExecutionResult {
+    let sysinfo = get_sysinfo();
 
     let killed_processes: Vec<(&sysinfo::Process, bool)> = sysinfo
         .processes_by_name(name)
         .filter(|x| x.cmd().join(" ").contains(&String::from(pattern)))
-        .map(|x| (x, x.kill()))
+        .map(|x| (x, x.kill_with(sysinfo::Signal::Interrupt).unwrap()))
         .collect();
 
     killed_processes
@@ -150,9 +129,8 @@ fn process_exited_with_success(
     child_process_result: CommandExecutionResult,
 ) -> (bool, Option<String>, Option<String>) {
     match child_process_result {
-        Ok(ChildProcess(Some((child, _)))) => {
+        Ok(ChildProcess(Some((child, exit_status)))) => {
             let mut child = child.lock().unwrap();
-            let exit_status = child.wait().unwrap();
 
             let mut stdout = String::new();
             child

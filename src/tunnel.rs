@@ -1,27 +1,15 @@
-use std::{
-    eprintln,
-    sync::{Arc, Mutex},
-    thread,
-    time::Duration,
-};
+use std::{thread, time::Duration};
 
-use sysinfo::{ProcessExt, System, SystemExt};
+use sysinfo::{ProcessExt, SystemExt};
 
 use crate::{
-    kill_process, refresh_sysinfo, start_process, AlreadyStartedCommands, CommandExecutionResult,
-    OptionFunc,
+    get_sysinfo, kill_process, start_and_wait_process, CommandExecutionResult,
+    CommandResultType::*, OptionFunc,
 };
 
-pub fn create_minikube_tunnel(
-    already_started_commands: AlreadyStartedCommands,
-    sysinfo: Arc<Mutex<System>>,
-) -> Result<(), String> {
-    if let Ok(false) = check_minikube_tunnel(Arc::clone(&sysinfo)) {
-        let result = toggle_minikube_tunnel(
-            false,
-            Arc::clone(&sysinfo),
-            Arc::clone(&already_started_commands),
-        );
+pub fn create_minikube_tunnel() -> Result<(), String> {
+    if let Ok(false) = check_minikube_tunnel() {
+        let result = toggle_minikube_tunnel(false);
 
         return match result {
             Ok(_) => Ok(()),
@@ -29,14 +17,13 @@ pub fn create_minikube_tunnel(
         };
     }
 
+    println!("The minikube tunnel has been started\n");
+
     Ok(())
 }
 
-pub fn build_minikube_tunnel_option(
-    already_started_commands: AlreadyStartedCommands,
-    sysinfo: Arc<Mutex<System>>,
-) -> Result<(String, OptionFunc), String> {
-    let check_minikube_tunnel_result = check_minikube_tunnel(Arc::clone(&sysinfo));
+pub fn build_minikube_tunnel_option() -> Result<(String, OptionFunc), String> {
+    let check_minikube_tunnel_result = check_minikube_tunnel();
 
     match check_minikube_tunnel_result {
         Ok(running) => {
@@ -44,52 +31,39 @@ pub fn build_minikube_tunnel_option(
 
             Ok((
                 format!("{next_state} minikube tunnel"),
-                Box::new(move || {
-                    toggle_minikube_tunnel(
-                        running,
-                        Arc::clone(&sysinfo),
-                        Arc::clone(&already_started_commands),
-                    )
-                }),
+                Box::new(move || toggle_minikube_tunnel(running)),
             ))
         }
         Err(error) => Err(format!("Error in build_minikube_tunnel_option: {error}")),
     }
 }
 
-fn check_minikube_tunnel(sysinfo: Arc<Mutex<System>>) -> Result<bool, String> {
-    let sysinfo = refresh_sysinfo(&sysinfo);
-
-    let found = sysinfo
+fn check_minikube_tunnel() -> Result<bool, String> {
+    Ok(get_sysinfo()
         .processes_by_name("minikube")
-        .any(|x| x.cmd().join(" ").contains("tunnel"));
-
-    Ok(found)
+        .any(|x| x.cmd().join(" ").contains("tunnel")))
 }
 
-fn toggle_minikube_tunnel(
-    running: bool,
-    sysinfo: Arc<Mutex<System>>,
-    already_started_commands: AlreadyStartedCommands,
-) -> CommandExecutionResult {
+fn toggle_minikube_tunnel(running: bool) -> CommandExecutionResult {
     if running {
-        let result = kill_process("minikube", "tunnel", Arc::clone(&sysinfo));
+        let result = kill_process("minikube", "tunnel");
 
-        println!("minikube tunnel has been stopped\n");
+        println!("The minikube tunnel has been stopped\n");
 
         result
     } else {
-        let result = start_process(
-            "minikube",
-            &["tunnel", "--bind-address", "127.0.0.1"],
-            Some(String::from("Could not proxy minikube tunnel")),
-            already_started_commands,
-        )?;
+        thread::spawn(move || {
+            let _ = start_and_wait_process(
+                "minikube",
+                &["tunnel", "-c", "--bind-address=127.0.0.1"],
+                Some(String::from("Could not start minikube tunnel")),
+            );
+        });
 
         {
             let mut cnt = 0;
 
-            while !check_minikube_tunnel(Arc::clone(&sysinfo))? && cnt < 5 {
+            while !check_minikube_tunnel()? && cnt < 5 {
                 cnt += 1;
                 thread::sleep(Duration::from_secs(1));
             }
@@ -101,8 +75,8 @@ fn toggle_minikube_tunnel(
             }
         }
 
-        println!("minikube tunnel has been started\n");
+        println!("The minikube tunnel has been started\n");
 
-        Ok(result)
+        Ok(PrintableResults(Vec::new()))
     }
 }

@@ -1,16 +1,11 @@
-use std::sync::Arc;
-
 use crate::{
-    process_exited_with_success, start_process, AlreadyStartedCommands, CommandExecutionResult,
+    process_exited_with_success, start_and_wait_process, CommandExecutionResult,
     CommandResultType::*, OptionFunc,
 };
 
-pub fn create_kubernetes_dashboard_load_balancer(
-    already_started_commands: AlreadyStartedCommands,
-) -> Result<(), String> {
-    if let Ok(false) = check_kubernetes_dashboard(Arc::clone(&already_started_commands)) {
-        let result =
-            toggle_kubernetes_dashboard_load_balancer(false, Arc::clone(&already_started_commands));
+pub fn create_kubernetes_dashboard_load_balancer() -> Result<(), String> {
+    if let Ok(false) = check_kubernetes_dashboard() {
+        let result = toggle_kubernetes_dashboard_load_balancer(false);
 
         return match result {
             Ok(_) => Ok(()),
@@ -18,27 +13,21 @@ pub fn create_kubernetes_dashboard_load_balancer(
         };
     }
 
+    println!("The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:51515\n");
+
     Ok(())
 }
 
-pub fn build_kubernetes_dashboard_option(
-    already_started_commands: AlreadyStartedCommands,
-) -> Result<(String, OptionFunc), String> {
-    let check_kubernetes_dashboard_result =
-        check_kubernetes_dashboard(Arc::clone(&already_started_commands));
+pub fn build_kubernetes_dashboard_option() -> Result<(String, OptionFunc), String> {
+    let check_kubernetes_dashboard_result = check_kubernetes_dashboard();
 
     match check_kubernetes_dashboard_result {
         Ok(running) => {
-            let next_state = if running { "Stop proxying" } else { "Proxy" };
+            let next_state = if running { "Delete" } else { "Create" };
 
             Ok((
-                format!("{next_state} kubernetes dashboard"),
-                Box::new(move || {
-                    toggle_kubernetes_dashboard_load_balancer(
-                        running,
-                        Arc::clone(&already_started_commands),
-                    )
-                }),
+                format!("{next_state} kubernetes dashboard load balancer"),
+                Box::new(move || toggle_kubernetes_dashboard_load_balancer(running)),
             ))
         }
         Err(error) => Err(format!(
@@ -47,10 +36,8 @@ pub fn build_kubernetes_dashboard_option(
     }
 }
 
-fn check_kubernetes_dashboard(
-    already_started_commands: AlreadyStartedCommands,
-) -> Result<bool, String> {
-    let result = start_process(
+fn check_kubernetes_dashboard() -> Result<bool, String> {
+    let result = start_and_wait_process(
         "kubectl",
         &[
             "-n",
@@ -61,7 +48,6 @@ fn check_kubernetes_dashboard(
             "--no-headers",
         ],
         None,
-        Arc::clone(&already_started_commands),
     );
 
     match process_exited_with_success(result) {
@@ -75,12 +61,9 @@ fn check_kubernetes_dashboard(
     }
 }
 
-fn toggle_kubernetes_dashboard_load_balancer(
-    running: bool,
-    already_started_commands: AlreadyStartedCommands,
-) -> CommandExecutionResult {
+fn toggle_kubernetes_dashboard_load_balancer(running: bool) -> CommandExecutionResult {
     if running {
-        let result = start_process(
+        let result = start_and_wait_process(
             "kubectl",
             &[
                 "-n",
@@ -92,7 +75,6 @@ fn toggle_kubernetes_dashboard_load_balancer(
             Some(String::from(
                 "Could not delete kubernetes dashboard load balancer",
             )),
-            Arc::clone(&already_started_commands),
         );
 
         match process_exited_with_success(result) {
@@ -107,7 +89,7 @@ fn toggle_kubernetes_dashboard_load_balancer(
             )),
         }
     } else {
-        let result = start_process(
+        let result = start_and_wait_process(
             "kubectl",
             &[
                 "-n",
@@ -127,7 +109,6 @@ fn toggle_kubernetes_dashboard_load_balancer(
                 "reason=kube-minion",
             ],
             Some(String::from("Could not proxy kubernetes dashboard")),
-            Arc::clone(&already_started_commands),
         );
 
         match process_exited_with_success(result) {

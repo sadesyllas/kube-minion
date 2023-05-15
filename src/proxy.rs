@@ -1,6 +1,6 @@
-use std::{default::default, io::Read, todo};
+use std::{io::Read, todo};
 
-use crate::{start_process, CommandExecutionResult, CommandResultType::*, OptionFunc};
+use crate::{start_and_wait_process, CommandExecutionResult, CommandResultType::*, OptionFunc};
 
 pub fn build_fetch_load_balancers_option() -> Result<(String, OptionFunc), String> {
     Ok((
@@ -10,7 +10,7 @@ pub fn build_fetch_load_balancers_option() -> Result<(String, OptionFunc), Strin
 }
 
 pub fn fetch_load_balancers() -> CommandExecutionResult {
-    let (child, _) = start_process(
+    let (child, _) = start_and_wait_process(
         "kubectl",
         &[
             "get",
@@ -21,15 +21,12 @@ pub fn fetch_load_balancers() -> CommandExecutionResult {
             "--no-headers",
         ],
         Some(String::from("Failed to fetch load balancers")),
-        default(),
     )?
     .child_process()
     .take()
     .unwrap();
 
     let mut child = child.lock().unwrap();
-
-    child.wait().unwrap();
 
     let mut stdout = String::new();
     child
