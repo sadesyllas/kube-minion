@@ -16,7 +16,7 @@ fn main() -> Result<(), String> {
     loop {
         let options = build_options()?;
 
-        println!("0. Refresh state");
+        println!("0. Refresh options");
 
         for (index, (description, _)) in options.iter().enumerate() {
             println!("{}. {description}", index + 1);
