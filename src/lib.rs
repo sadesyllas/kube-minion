@@ -19,7 +19,6 @@ type CommandExecutionResult = Result<CommandResultType, String>;
 type OptionFunc = Box<dyn Fn() -> CommandExecutionResult>;
 
 pub use dashboard::create_kubernetes_dashboard_load_balancer;
-pub use proxy::{create_load_balancer, fetch_load_balancers};
 pub use tunnel::create_minikube_tunnel;
 
 pub enum CommandResultType {
@@ -38,6 +37,7 @@ impl CommandResultType {
     }
 }
 
+use crate::proxy::build_create_load_balancer_option;
 use tunnel::build_minikube_tunnel_option;
 use CommandResultType::*;
 
@@ -67,10 +67,11 @@ pub fn build_options() -> Result<Vec<(String, OptionFunc)>, String> {
         build_kubernetes_dashboard_option()?,
         build_minikube_tunnel_option()?,
         build_fetch_load_balancers_option()?,
+        build_create_load_balancer_option()?,
     ])
 }
 
-pub fn get_sysinfo() -> System {
+pub fn get_sys_info() -> System {
     System::new_with_specifics(RefreshKind::new().with_processes(ProcessRefreshKind::everything()))
 }
 
@@ -103,9 +104,9 @@ fn start_and_wait_process(
 }
 
 fn kill_process(name: &str, pattern: &str) -> CommandExecutionResult {
-    let sysinfo = get_sysinfo();
+    let sys_info = get_sys_info();
 
-    let killed_processes: Vec<(&sysinfo::Process, bool)> = sysinfo
+    let killed_processes: Vec<(&sysinfo::Process, bool)> = sys_info
         .processes_by_name(name)
         .filter(|x| x.cmd().join(" ").contains(&String::from(pattern)))
         .map(|x| (x, x.kill_with(sysinfo::Signal::Interrupt).unwrap()))
@@ -117,7 +118,7 @@ fn kill_process(name: &str, pattern: &str) -> CommandExecutionResult {
 
     if killed_processes
         .iter()
-        .any(|(_, successfully_killed)| !successfully_killed)
+        .any(|(_, successfully_killed)| !*successfully_killed)
     {
         Err(format!("Failed to kill {name} with pattern {pattern}"))
     } else {

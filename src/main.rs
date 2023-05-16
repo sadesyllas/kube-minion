@@ -1,10 +1,9 @@
-use std::io::{stdin, stdout, BufRead, Write};
+use std::io::{stdin, stdout, BufRead, Read, Write};
 
 use kube_minion::{
     self, build_options, create_kubernetes_dashboard_load_balancer, create_minikube_tunnel,
-    get_sysinfo, verify_dependencies, CommandResultType::*,
+    verify_dependencies, CommandResultType::*,
 };
-use sysinfo::{Pid, PidExt, SystemExt};
 
 fn main() -> Result<(), String> {
     verify_dependencies()?;
@@ -60,17 +59,35 @@ fn main() -> Result<(), String> {
         let (_, func) = &options[option_index - 1];
 
         match func() {
-            Ok(ChildProcess(result)) => {
-                if let Some((child, _)) = result {
-                    let child_process = child.lock().unwrap();
-                    let sysinfo = get_sysinfo();
-                    let alive_process = sysinfo.process(Pid::from_u32(child_process.id()));
+            Ok(ChildProcess(Some((child, exit_status)))) => {
+                let mut child = child.lock().unwrap();
+                let mut output = String::new();
 
-                    if alive_process.is_none() {
-                        eprintln!("Process started and died unexpectedly\n");
+                if exit_status.success() {
+                    child
+                        .stdout
+                        .take()
+                        .unwrap()
+                        .read_to_string(&mut output)
+                        .unwrap();
+
+                    if !output.is_empty() {
+                        println!("{output}");
+                    }
+                } else {
+                    child
+                        .stderr
+                        .take()
+                        .unwrap()
+                        .read_to_string(&mut output)
+                        .unwrap();
+
+                    if !output.is_empty() {
+                        eprintln!("{output}");
                     }
                 }
             }
+            Ok(ChildProcess(None)) => continue,
             Ok(PrintableResults(result)) => {
                 let printable_results: Vec<(usize, &String)> = result.iter().enumerate().collect();
 

@@ -3,7 +3,7 @@ use std::{thread, time::Duration};
 use sysinfo::{ProcessExt, SystemExt};
 
 use crate::{
-    get_sysinfo, kill_process, start_and_wait_process, CommandExecutionResult,
+    get_sys_info, kill_process, start_and_wait_process, CommandExecutionResult,
     CommandResultType::*, OptionFunc,
 };
 
@@ -39,7 +39,7 @@ pub fn build_minikube_tunnel_option() -> Result<(String, OptionFunc), String> {
 }
 
 fn check_minikube_tunnel() -> Result<bool, String> {
-    Ok(get_sysinfo()
+    Ok(get_sys_info()
         .processes_by_name("minikube")
         .any(|x| x.cmd().join(" ").contains("tunnel")))
 }
