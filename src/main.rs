@@ -15,13 +15,14 @@ fn main() -> Result<(), String> {
     loop {
         let options = build_options()?;
 
-        println!("0. Refresh options");
+        println!("Options:");
+        println!("\t0. Refresh options");
 
         for (index, (description, _)) in options.iter().enumerate() {
-            println!("{}. {description}", index + 1);
+            println!("\t{}. {description}", index + 1);
         }
 
-        print!("Option: ");
+        print!("\tOption: ");
         {
             stdout().lock().flush().unwrap();
         }
