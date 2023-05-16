@@ -13,7 +13,7 @@ pub fn create_kubernetes_dashboard_load_balancer() -> Result<(), String> {
         };
     }
 
-    println!("The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:51515\n");
+    println!("The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:51515");
 
     Ok(())
 }
@@ -79,7 +79,7 @@ fn toggle_kubernetes_dashboard_load_balancer(running: bool) -> CommandExecutionR
 
         match process_exited_with_success(result) {
             (true, _, _) => {
-                println!("The kubernetes dashboard load balancer has been deleted\n");
+                println!("The kubernetes dashboard load balancer has been deleted");
 
                 Ok(PrintableResults(Vec::new()))
             }
@@ -113,7 +113,7 @@ fn toggle_kubernetes_dashboard_load_balancer(running: bool) -> CommandExecutionR
 
         match process_exited_with_success(result) {
             (true, _, _) => {
-                println!("The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:51515\n");
+                println!("The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:51515");
 
                 Ok(PrintableResults(Vec::new()))
             }

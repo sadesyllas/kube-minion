@@ -34,24 +34,22 @@ fn main() -> Result<(), String> {
                 .map_err(|x| x.to_string())?;
         }
 
-        println!();
-
         let option_index = match option_index.trim().parse::<usize>() {
             Ok(option_index) => option_index,
             Err(_) => {
-                eprintln!("Invalid option index provided\n");
+                eprintln!("Invalid option index provided");
 
                 continue;
             }
         };
 
         if option_index == 0 {
-            println!("Refreshing state...\n");
+            println!("Refreshing state...");
             continue;
         }
 
         if option_index > options.len() {
-            eprintln!("Invalid option index provided\n");
+            eprintln!("Invalid option index provided");
 
             continue;
         }
@@ -71,6 +69,8 @@ fn main() -> Result<(), String> {
                         .read_to_string(&mut output)
                         .unwrap();
 
+                    let output = output.trim();
+
                     if !output.is_empty() {
                         println!("{output}");
                     }
@@ -82,24 +82,22 @@ fn main() -> Result<(), String> {
                         .read_to_string(&mut output)
                         .unwrap();
 
+                    let output = output.trim();
+
                     if !output.is_empty() {
                         eprintln!("{output}");
                     }
                 }
             }
-            Ok(ChildProcess(None)) => continue,
+            Ok(ChildProcess(None)) => (),
             Ok(PrintableResults(result)) => {
                 let printable_results: Vec<(usize, &String)> = result.iter().enumerate().collect();
 
                 printable_results
                     .iter()
                     .for_each(|(i, x)| println!("\t{}. {x}", i + 1));
-
-                if !printable_results.is_empty() {
-                    println!();
-                }
             }
-            Err(error) => eprintln!("{error}\n"),
+            Err(error) => eprintln!("{error}"),
         };
     }
 }

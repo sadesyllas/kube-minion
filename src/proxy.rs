@@ -96,8 +96,6 @@ fn create_load_balancer_guided() -> CommandExecutionResult {
         None,
     )?;
 
-    println!();
-
     create_load_balancer(&namespace, &resource_type, &name, port, target_port)
 }
 
@@ -138,8 +136,6 @@ fn delete_load_balancer_guided() -> CommandExecutionResult {
         Some(format!("An index is required to delete a load balancer")),
     )?;
 
-    println!();
-
     delete_load_balancer(index - 1)
 }
 
@@ -179,7 +175,6 @@ fn parse_string(
 
     if input.is_empty() {
         if let Some(error_when_empty) = error_when_empty {
-            println!();
             return Err(error_when_empty);
         }
 
@@ -187,7 +182,6 @@ fn parse_string(
             return Ok(default_value);
         }
 
-        println!();
         return Err(String::from("An empty value is not allowed"));
     } else {
         Ok(String::from(input))
@@ -213,7 +207,6 @@ fn parse_num<T: FromStr>(
 
     if input.is_empty() {
         if let Some(error_when_empty) = error_when_empty {
-            println!();
             return Err(error_when_empty);
         }
 
@@ -221,7 +214,6 @@ fn parse_num<T: FromStr>(
             return Ok(default_value);
         }
 
-        println!();
         return Err(String::from("An empty value is not allowed"));
     } else {
         input

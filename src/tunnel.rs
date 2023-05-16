@@ -17,7 +17,7 @@ pub fn create_minikube_tunnel() -> Result<(), String> {
         };
     }
 
-    println!("The minikube tunnel has been started\n");
+    println!("The minikube tunnel has been started");
 
     Ok(())
 }
@@ -48,7 +48,7 @@ fn toggle_minikube_tunnel(running: bool) -> CommandExecutionResult {
     if running {
         let result = kill_process("minikube", "tunnel");
 
-        println!("The minikube tunnel has been stopped\n");
+        println!("The minikube tunnel has been stopped");
 
         result
     } else {
@@ -75,7 +75,7 @@ fn toggle_minikube_tunnel(running: bool) -> CommandExecutionResult {
             }
         }
 
-        println!("The minikube tunnel has been started\n");
+        println!("The minikube tunnel has been started");
 
         Ok(PrintableResults(Vec::new()))
     }
