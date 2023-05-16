@@ -1,6 +1,6 @@
+use std::io::Read;
 use std::io::{stdin, stdout, BufRead, Write};
 use std::str::FromStr;
-use std::{io::Read, todo};
 
 use crate::{start_and_wait_process, CommandExecutionResult, CommandResultType::*, OptionFunc};
 
@@ -138,7 +138,9 @@ fn delete_load_balancer_guided() -> CommandExecutionResult {
         Some(format!("An index is required to delete a load balancer")),
     )?;
 
-    delete_load_balancer(index)
+    println!();
+
+    delete_load_balancer(index - 1)
 }
 
 fn delete_load_balancer(index: usize) -> CommandExecutionResult {
@@ -153,7 +155,9 @@ fn delete_load_balancer(index: usize) -> CommandExecutionResult {
         ));
     }
 
-    let load_balancer_spec = parse_load_balancer(&load_balancers[index]);
+    let (namespace, name) = parse_load_balancer(&load_balancers[index]);
+
+    start_and_wait_process("kubectl", &["-n", &namespace, "delete", "svc", &name], None)
 }
 
 fn parse_string(
@@ -227,7 +231,7 @@ fn parse_num<T: FromStr>(
 }
 
 fn parse_load_balancer(spec: &str) -> (String, String) {
-    let re = Regex::new(r"\s*").unwrap();
+    let re = Regex::new(r"\s+").unwrap();
     let parts: Vec<&str> = re.split(spec).collect();
 
     (String::from(parts[0]), String::from(parts[1]))

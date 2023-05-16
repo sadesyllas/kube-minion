@@ -37,7 +37,7 @@ impl CommandResultType {
     }
 }
 
-use crate::proxy::build_create_load_balancer_option;
+use crate::proxy::{build_create_load_balancer_option, build_delete_load_balancer_option};
 use tunnel::build_minikube_tunnel_option;
 use CommandResultType::*;
 
@@ -68,6 +68,7 @@ pub fn build_options() -> Result<Vec<(String, OptionFunc)>, String> {
         build_minikube_tunnel_option()?,
         build_fetch_load_balancers_option()?,
         build_create_load_balancer_option()?,
+        build_delete_load_balancer_option()?,
     ])
 }
 
