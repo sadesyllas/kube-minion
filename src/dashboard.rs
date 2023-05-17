@@ -81,7 +81,7 @@ fn toggle_kubernetes_dashboard_load_balancer(running: bool) -> CommandExecutionR
             (true, _, _) => {
                 println!("The kubernetes dashboard load balancer has been deleted");
 
-                Ok(PrintableResults(Vec::new()))
+                Ok(PrintableResults(None, Vec::new()))
             }
             (false, _, Some(error)) => Err(error),
             (false, _, _) => Err(String::from(
@@ -115,7 +115,7 @@ fn toggle_kubernetes_dashboard_load_balancer(running: bool) -> CommandExecutionR
             (true, _, _) => {
                 println!("The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:51515");
 
-                Ok(PrintableResults(Vec::new()))
+                Ok(PrintableResults(None, Vec::new()))
             }
             (false, _, Some(error)) => Err(error),
             (false, _, _) => Err(String::from(

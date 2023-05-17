@@ -91,12 +91,27 @@ fn main() -> Result<(), String> {
                 }
             }
             Ok(ChildProcess(None)) => (),
-            Ok(PrintableResults(result)) => {
+            Ok(PrintableResults(title, result)) => {
                 let printable_results: Vec<(usize, &String)> = result.iter().enumerate().collect();
+                let mut indentation = "";
+                let mut print_indexes = false;
 
-                printable_results
-                    .iter()
-                    .for_each(|(i, x)| println!("\t{}. {x}", i + 1));
+                if let Some(title) = title {
+                    println!("{title}");
+
+                    indentation = "\t";
+                    print_indexes = true;
+                }
+
+                printable_results.iter().for_each(|(i, x)| {
+                    let index = if print_indexes {
+                        format!("{}. ", i + 1)
+                    } else {
+                        String::new()
+                    };
+
+                    println!("{indentation}{index}{x}");
+                });
             }
             Err(error) => eprintln!("{error}"),
         };

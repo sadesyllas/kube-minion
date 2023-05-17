@@ -1,8 +1,9 @@
 use std::io::Read;
-use std::io::{stdin, stdout, BufRead, Write};
-use std::str::FromStr;
 
-use crate::{start_and_wait_process, CommandExecutionResult, CommandResultType::*, OptionFunc};
+use crate::{
+    parse_num, parse_string, start_and_wait_process, CommandExecutionResult, CommandResultType::*,
+    OptionFunc,
+};
 
 use regex::Regex;
 
@@ -24,6 +25,13 @@ pub fn build_delete_load_balancer_option() -> Result<(String, OptionFunc), Strin
     Ok((
         String::from("Delete load balancer"),
         Box::new(delete_load_balancer_guided),
+    ))
+}
+
+pub fn build_delete_all_load_balancers_option() -> Result<(String, OptionFunc), String> {
+    Ok((
+        String::from("Delete all load balancers"),
+        Box::new(delete_all_load_balancers),
     ))
 }
 
@@ -54,13 +62,19 @@ fn fetch_load_balancers() -> CommandExecutionResult {
         .read_to_string(&mut stdout)
         .unwrap();
 
-    Ok(PrintableResults(
-        stdout
-            .lines()
-            .filter(|x| !x.contains("kubernetes-dashboard-lb"))
-            .map(String::from)
-            .collect::<Vec<_>>(),
-    ))
+    let load_balancers = stdout
+        .lines()
+        .filter(|x| !x.contains("kubernetes-dashboard-lb"))
+        .map(String::from)
+        .collect::<Vec<_>>();
+
+    let title = if load_balancers.is_empty() {
+        None
+    } else {
+        Some(String::from("Load balancers:"))
+    };
+
+    Ok(PrintableResults(title, load_balancers))
 }
 
 fn create_load_balancer_guided() -> CommandExecutionResult {
@@ -142,7 +156,7 @@ fn delete_load_balancer_guided() -> CommandExecutionResult {
 fn delete_load_balancer(index: usize) -> CommandExecutionResult {
     let load_balancers = match fetch_load_balancers()? {
         ChildProcess(_) => unreachable!(),
-        PrintableResults(results) => results,
+        PrintableResults(_, results) => results,
     };
 
     if index >= load_balancers.len() {
@@ -156,70 +170,48 @@ fn delete_load_balancer(index: usize) -> CommandExecutionResult {
     start_and_wait_process("kubectl", &["-n", &namespace, "delete", "svc", &name], None)
 }
 
-fn parse_string(
-    prompt: &str,
-    default_value: Option<String>,
-    error_when_empty: Option<String>,
-) -> Result<String, String> {
-    let mut input = String::new();
-    let mut stdin = stdin().lock();
-    let mut stdout = stdout().lock();
+fn delete_all_load_balancers() -> CommandExecutionResult {
+    let load_balancers = match fetch_load_balancers()? {
+        ChildProcess(_) => unreachable!(),
+        PrintableResults(_, results) => results,
+    };
 
-    print!("{prompt}");
-    stdout.flush().unwrap();
+    let mut results: Vec<String> = Vec::new();
 
-    input.clear();
-    stdin.read_line(&mut input).unwrap();
+    for load_balancer in &load_balancers {
+        let (namespace, name) = parse_load_balancer(load_balancer);
 
-    let input = input.trim();
+        let result =
+            start_and_wait_process("kubectl", &["-n", &namespace, "delete", "svc", &name], None)?;
 
-    if input.is_empty() {
-        if let Some(error_when_empty) = error_when_empty {
-            return Err(error_when_empty);
+        match result {
+            ChildProcess(Some((child, exit_status))) => {
+                if !exit_status.success() {
+                    return Ok(ChildProcess(Some((child, exit_status))));
+                }
+
+                let mut output = String::new();
+
+                child
+                    .lock()
+                    .unwrap()
+                    .stdout
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut output)
+                    .unwrap();
+
+                let output = output.trim();
+
+                if !output.is_empty() {
+                    results.push(String::from(output));
+                }
+            }
+            _ => unreachable!(),
         }
-
-        if let Some(default_value) = default_value {
-            return Ok(default_value);
-        }
-
-        return Err(String::from("An empty value is not allowed"));
-    } else {
-        Ok(String::from(input))
     }
-}
 
-fn parse_num<T: FromStr>(
-    prompt: &str,
-    default_value: Option<T>,
-    error_when_empty: Option<String>,
-) -> Result<T, String> {
-    let mut input = String::new();
-    let mut stdin = stdin().lock();
-    let mut stdout = stdout().lock();
-
-    print!("{prompt}");
-    stdout.flush().unwrap();
-
-    input.clear();
-    stdin.read_line(&mut input).unwrap();
-
-    let input = input.trim();
-
-    if input.is_empty() {
-        if let Some(error_when_empty) = error_when_empty {
-            return Err(error_when_empty);
-        }
-
-        if let Some(default_value) = default_value {
-            return Ok(default_value);
-        }
-
-        return Err(String::from("An empty value is not allowed"));
-    } else {
-        input
-            .parse::<T>()
-            .map_err(|_| format!("Failed to parse {input} as a number"))
-    }
+    Ok(PrintableResults(None, results))
 }
 
 fn parse_load_balancer(spec: &str) -> (String, String) {

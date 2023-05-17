@@ -46,12 +46,16 @@ fn check_minikube_tunnel() -> Result<bool, String> {
 
 fn toggle_minikube_tunnel(running: bool) -> CommandExecutionResult {
     if running {
-        let result = kill_process("minikube", "tunnel");
+        let result = kill_process("minikube", vec!["tunnel"]);
+
+        clear_minikube_ssh_tunnels()?;
 
         println!("The minikube tunnel has been stopped");
 
         result
     } else {
+        clear_minikube_ssh_tunnels()?;
+
         thread::spawn(move || {
             let _ = start_and_wait_process(
                 "minikube",
@@ -77,6 +81,28 @@ fn toggle_minikube_tunnel(running: bool) -> CommandExecutionResult {
 
         println!("The minikube tunnel has been started");
 
-        Ok(PrintableResults(Vec::new()))
+        Ok(PrintableResults(None, Vec::new()))
     }
+}
+
+fn clear_minikube_ssh_tunnels() -> Result<(), String> {
+    let sys_info = get_sys_info();
+    let ssh_processes = sys_info.processes_by_name("ssh").filter(|x| {
+        let cmd = x.cmd().join(" ");
+
+        cmd.contains("docker@127.0.0.1")
+            && cmd.contains("minikube/id_rsa")
+            && cmd.contains("-L 127.0.0.1:")
+    });
+
+    for ssh_process in ssh_processes {
+        if !ssh_process.kill() {
+            return Err(format!(
+                "Failed to kill minikube ssh tunnel with process id {pid}",
+                pid = ssh_process.pid(),
+            ));
+        }
+    }
+
+    Ok(())
 }
