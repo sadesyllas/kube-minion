@@ -7,17 +7,17 @@ use crate::{
 
 use regex::Regex;
 
-pub fn build_fetch_load_balancers_option() -> Result<(String, OptionFunc), String> {
-    Ok((
-        String::from("List load balancers"),
-        Box::new(fetch_load_balancers),
-    ))
-}
-
 pub fn build_create_load_balancer_option() -> Result<(String, OptionFunc), String> {
     Ok((
         String::from("Create load balancer"),
         Box::new(create_load_balancer_guided),
+    ))
+}
+
+pub fn build_fetch_load_balancers_option() -> Result<(String, OptionFunc), String> {
+    Ok((
+        String::from("List load balancers"),
+        Box::new(fetch_load_balancers),
     ))
 }
 
@@ -33,6 +33,50 @@ pub fn build_delete_all_load_balancers_option() -> Result<(String, OptionFunc), 
         String::from("Delete all load balancers"),
         Box::new(delete_all_load_balancers),
     ))
+}
+
+pub fn delete_all_load_balancers() -> CommandExecutionResult {
+    let load_balancers = match fetch_load_balancers()? {
+        ChildProcess(_) => unreachable!(),
+        PrintableResults(_, results) => results,
+    };
+
+    let mut results: Vec<String> = Vec::new();
+
+    for load_balancer in &load_balancers {
+        let (namespace, name) = parse_load_balancer(load_balancer);
+
+        let result =
+            start_and_wait_process("kubectl", &["-n", &namespace, "delete", "svc", &name], None)?;
+
+        match result {
+            ChildProcess(Some((child, exit_status))) => {
+                if !exit_status.success() {
+                    return Ok(ChildProcess(Some((child, exit_status))));
+                }
+
+                let mut output = String::new();
+
+                child
+                    .lock()
+                    .unwrap()
+                    .stdout
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut output)
+                    .unwrap();
+
+                let output = output.trim();
+
+                if !output.is_empty() {
+                    results.push(String::from(output));
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    Ok(PrintableResults(None, results))
 }
 
 fn fetch_load_balancers() -> CommandExecutionResult {
@@ -168,50 +212,6 @@ fn delete_load_balancer(index: usize) -> CommandExecutionResult {
     let (namespace, name) = parse_load_balancer(&load_balancers[index]);
 
     start_and_wait_process("kubectl", &["-n", &namespace, "delete", "svc", &name], None)
-}
-
-fn delete_all_load_balancers() -> CommandExecutionResult {
-    let load_balancers = match fetch_load_balancers()? {
-        ChildProcess(_) => unreachable!(),
-        PrintableResults(_, results) => results,
-    };
-
-    let mut results: Vec<String> = Vec::new();
-
-    for load_balancer in &load_balancers {
-        let (namespace, name) = parse_load_balancer(load_balancer);
-
-        let result =
-            start_and_wait_process("kubectl", &["-n", &namespace, "delete", "svc", &name], None)?;
-
-        match result {
-            ChildProcess(Some((child, exit_status))) => {
-                if !exit_status.success() {
-                    return Ok(ChildProcess(Some((child, exit_status))));
-                }
-
-                let mut output = String::new();
-
-                child
-                    .lock()
-                    .unwrap()
-                    .stdout
-                    .take()
-                    .unwrap()
-                    .read_to_string(&mut output)
-                    .unwrap();
-
-                let output = output.trim();
-
-                if !output.is_empty() {
-                    results.push(String::from(output));
-                }
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    Ok(PrintableResults(None, results))
 }
 
 fn parse_load_balancer(spec: &str) -> (String, String) {

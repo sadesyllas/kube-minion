@@ -18,6 +18,19 @@ pub fn create_kubernetes_dashboard_load_balancer() -> Result<(), String> {
     Ok(())
 }
 
+pub fn delete_kubernetes_dashboard_load_balancer() -> Result<(), String> {
+    if let Ok(true) = check_kubernetes_dashboard() {
+        let result = toggle_kubernetes_dashboard_load_balancer(true);
+
+        return match result {
+            Ok(_) => Ok(()),
+            Err(error) => Err(error),
+        };
+    }
+
+    Ok(())
+}
+
 pub fn build_kubernetes_dashboard_option() -> Result<(String, OptionFunc), String> {
     let check_kubernetes_dashboard_result = check_kubernetes_dashboard();
 

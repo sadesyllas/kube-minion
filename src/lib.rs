@@ -1,8 +1,10 @@
 #![feature(default_free_fn)]
 #![feature(let_chains)]
 
+mod clean_up_and_exit;
 mod dashboard;
 mod load_balancer;
+mod minikube_mount;
 mod minikube_tunnel;
 mod socat_tunnel;
 
@@ -14,16 +16,22 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use dashboard::build_kubernetes_dashboard_option;
-use load_balancer::build_fetch_load_balancers_option;
 use sysinfo::{ProcessExt, ProcessRefreshKind, RefreshKind, System, SystemExt};
+
+pub use dashboard::create_kubernetes_dashboard_load_balancer;
+pub use minikube_tunnel::create_minikube_tunnel;
+
+use crate::clean_up_and_exit::build_clean_up_and_exit_option;
+use dashboard::*;
+use load_balancer::*;
+use minikube_mount::*;
+use minikube_tunnel::*;
+use socat_tunnel::*;
+use CommandResultType::*;
 
 type CommandExecutionResult = Result<CommandResultType, String>;
 
 type OptionFunc = Box<dyn Fn() -> CommandExecutionResult>;
-
-pub use dashboard::create_kubernetes_dashboard_load_balancer;
-pub use minikube_tunnel::create_minikube_tunnel;
 
 pub enum CommandResultType {
     ChildProcess(Option<(Arc<Mutex<process::Child>>, ExitStatus)>),
@@ -40,11 +48,6 @@ impl CommandResultType {
         }
     }
 }
-
-use crate::load_balancer::*;
-use crate::socat_tunnel::*;
-use minikube_tunnel::*;
-use CommandResultType::*;
 
 pub fn verify_dependencies() -> Result<(), String> {
     let could_not_find = |what| format!("Could not find {what} in path");
@@ -84,6 +87,12 @@ pub fn build_options() -> Result<Vec<(String, OptionFunc)>, String> {
         build_fetch_socat_tunnels_option()?,
         build_delete_socat_tunnel_option()?,
         build_delete_all_socat_tunnels_option()?,
+        build_set_default_connect_host_option()?,
+        build_create_minikube_mount_option()?,
+        build_fetch_minikube_mounts_option()?,
+        build_delete_minikube_mount_option()?,
+        build_delete_all_minikube_mounts_option()?,
+        build_clean_up_and_exit_option()?,
     ])
 }
 

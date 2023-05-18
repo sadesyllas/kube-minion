@@ -8,17 +8,19 @@ use crate::{
     CommandResultType::*, OptionFunc,
 };
 
-pub fn build_fetch_socat_tunnels_option() -> Result<(String, OptionFunc), String> {
-    Ok((
-        String::from("List socat tunnels"),
-        Box::new(fetch_socat_tunnels),
-    ))
-}
+static mut DEFAULT_CONNECT_HOST: Option<String> = None;
 
 pub fn build_create_socat_tunnel_option() -> Result<(String, OptionFunc), String> {
     Ok((
         String::from("Create socat tunnel"),
         Box::new(create_socat_tunnel_guided),
+    ))
+}
+
+pub fn build_fetch_socat_tunnels_option() -> Result<(String, OptionFunc), String> {
+    Ok((
+        String::from("List socat tunnels"),
+        Box::new(fetch_socat_tunnels),
     ))
 }
 
@@ -34,6 +36,43 @@ pub fn build_delete_all_socat_tunnels_option() -> Result<(String, OptionFunc), S
         String::from("Delete all socat tunnels"),
         Box::new(delete_all_socat_tunnels),
     ))
+}
+
+pub fn build_set_default_connect_host_option() -> Result<(String, OptionFunc), String> {
+    Ok((
+        String::from("Set socat default connect host"),
+        Box::new(set_default_connect_host_guided),
+    ))
+}
+
+pub fn delete_all_socat_tunnels() -> CommandExecutionResult {
+    let socat_tunnels = match fetch_socat_tunnels()? {
+        ChildProcess(_) => unreachable!(),
+        PrintableResults(_, results) => results,
+    };
+
+    let sys_info = get_sys_info();
+
+    let mut results: Vec<String> = Vec::new();
+
+    for socat_tunnel in &socat_tunnels {
+        let (listening_port, connect_host, connect_port) = parse_socat_tunnel(socat_tunnel);
+
+        if let Some(pid) = check_socat_tunnel(&sys_info, listening_port, &connect_host, connect_port) &&
+            let Some(process) = get_sys_info().process(pid) {
+            if process.kill() {
+                results.push(format!(
+                    "Stopped socat tunnel listening on port {listening_port} \
+                    and connecting to {connect_host}:{connect_port}", ));
+            } else {
+                results.push(format!(
+                    "Failed to stop socat tunnel listening on port {listening_port} \
+                    and connecting to {connect_host}:{connect_port}", ));
+            }
+        }
+    }
+
+    Ok(PrintableResults(None, results))
 }
 
 fn fetch_socat_tunnels() -> CommandExecutionResult {
@@ -70,7 +109,11 @@ fn create_socat_tunnel_guided() -> CommandExecutionResult {
 
     let connect_host = parse_string(
         "Connect host (leave empty for localhost): ",
-        Some(String::from("localhost")),
+        Some(String::from(unsafe {
+            DEFAULT_CONNECT_HOST
+                .as_ref()
+                .unwrap_or(&String::from("localhost"))
+        })),
         None,
     )?;
 
@@ -189,36 +232,6 @@ fn delete_socat_tunnel(index: usize) -> CommandExecutionResult {
     Ok(PrintableResults(None, results))
 }
 
-fn delete_all_socat_tunnels() -> CommandExecutionResult {
-    let socat_tunnels = match fetch_socat_tunnels()? {
-        ChildProcess(_) => unreachable!(),
-        PrintableResults(_, results) => results,
-    };
-
-    let sys_info = get_sys_info();
-
-    let mut results: Vec<String> = Vec::new();
-
-    for socat_tunnel in &socat_tunnels {
-        let (listening_port, connect_host, connect_port) = parse_socat_tunnel(socat_tunnel);
-
-        if let Some(pid) = check_socat_tunnel(&sys_info, listening_port, &connect_host, connect_port) &&
-            let Some(process) = get_sys_info().process(pid) {
-            if process.kill() {
-                results.push(format!(
-                    "Stopped socat tunnel listening on port {listening_port} \
-                    and connecting to {connect_host}:{connect_port}", ));
-            } else {
-                results.push(format!(
-                    "Failed to stop socat tunnel listening on port {listening_port} \
-                    and connecting to {connect_host}:{connect_port}", ));
-            }
-        }
-    }
-
-    Ok(PrintableResults(None, results))
-}
-
 fn parse_socat_tunnel(spec: &str) -> (u16, String, u16) {
     let re = Regex::new(
         r".+?-listen:(?<listening_port>[0-9]+).+?:(?<connect_host>.+):(?<connect_port>[0-9]+)$",
@@ -242,4 +255,28 @@ fn parse_socat_tunnel(spec: &str) -> (u16, String, u16) {
         .unwrap();
 
     (listening_port, connect_host, connect_port)
+}
+
+fn set_default_connect_host_guided() -> CommandExecutionResult {
+    let connect_host = parse_string(
+        "Default connect host: ",
+        None,
+        Some(String::from(
+            "No host provided as the socat default connect host",
+        )),
+    )?;
+
+    set_default_connect_host(connect_host);
+
+    Ok(PrintableResults(None, Vec::new()))
+}
+
+fn set_default_connect_host(connect_host: String) {
+    unsafe {
+        DEFAULT_CONNECT_HOST.replace(connect_host);
+    }
+
+    println!("Socat default connect host has been set to {}", unsafe {
+        DEFAULT_CONNECT_HOST.as_ref().unwrap()
+    });
 }

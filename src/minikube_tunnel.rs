@@ -22,6 +22,19 @@ pub fn create_minikube_tunnel() -> Result<(), String> {
     Ok(())
 }
 
+pub fn stop_minikube_tunnel() -> Result<(), String> {
+    if let Ok(true) = check_minikube_tunnel() {
+        let result = toggle_minikube_tunnel(true);
+
+        return match result {
+            Ok(_) => Ok(()),
+            Err(error) => Err(error),
+        };
+    }
+
+    Ok(())
+}
+
 pub fn build_minikube_tunnel_option() -> Result<(String, OptionFunc), String> {
     let check_minikube_tunnel_result = check_minikube_tunnel();
 

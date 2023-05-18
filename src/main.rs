@@ -12,7 +12,13 @@ fn main() -> Result<(), String> {
 
     create_minikube_tunnel().unwrap();
 
+    let mut exit = false;
+
     loop {
+        if exit {
+            break;
+        }
+
         let options = build_options()?;
 
         println!("Options:");
@@ -49,9 +55,12 @@ fn main() -> Result<(), String> {
             continue;
         }
 
+        if option_index == options.len() {
+            exit = true;
+        }
+
         if option_index > options.len() {
             eprintln!("Invalid option index provided");
-
             continue;
         }
 
@@ -116,4 +125,6 @@ fn main() -> Result<(), String> {
             Err(error) => eprintln!("{error}"),
         };
     }
+
+    Ok(())
 }
