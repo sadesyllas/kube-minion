@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sadesyllas/kube-minion/main/kube-minion.schema.json",
+  "loadBalancers": [
+    {
+      "namespace": "default",
+      "resourceType": "pods",
+      "name": "nginx",
+      "port": "8080",
+      "targetPort": "80"
+    }
+  ],
+  "socatTunnels": [
+    {
+      "protocol": "tcp",
+      "listeningPort": 80,
+      "connectHost": "localhost",
+      "connectPort": 8008
+    }
+  ],
+  "minikubeMounts": [
+    {
+      "hostPath": "/tmp/foo",
+      "minikubePath": "/data/foo"
+    }
+  ]
+}
