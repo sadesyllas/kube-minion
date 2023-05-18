@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "kube-minion JSON initialization configuration schema",
+  "description": "The schema for the initialization JSON configuration file for kube-minion",
+  "type": "object",
+  "properties": {
+    "loadBalancers": {
+      "type": "array",
+      "description": "Load balancer specifications",
+      "items": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "description": "The namespace in which the load balancer will be created",
+            "default": "default"
+          },
+          "resourceType": {
+            "type": "string",
+            "description": "The type of the resource for which to create the load balancer",
+            "default": "services"
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the load balancer to be created"
+          },
+          "port": {
+            "type": "integer",
+            "description": "The port on which the load balancer will listen",
+            "inclusiveMinimum": 1,
+            "inclusiveMaximum": 65535
+          },
+          "targetPort": {
+            "type": "integer",
+            "description": "The port which is exposed by the load balanced resource",
+            "inclusiveMinimum": 1,
+            "inclusiveMaximum": 65535
+          }
+        },
+        "required": [
+          "name",
+          "port"
+        ]
+      }
+    },
+    "socatTunnels": {
+      "type": "array",
+      "description": "Socat tunnel specifications",
+      "items": {
+        "type": "object",
+        "properties": {
+          "protocol": {
+            "type": "string",
+            "enum": [
+              "tcp",
+              "udp"
+            ],
+            "description": "The protocol which will be tunneled",
+            "default": "tcp"
+          },
+          "listeningPort": {
+            "type": "integer",
+            "description": "The port on which the socat tunnel will listen",
+            "inclusiveMinimum": 1,
+            "inclusiveMaximum": 65535
+          },
+          "connectHost": {
+            "type": "string",
+            "description": "The host at the receiving end of the tunnel",
+            "default": "localhost"
+          },
+          "connectPort": {
+            "type": "integer",
+            "description": "The port on which the socat tunnel will connect at the receiving end",
+            "inclusiveMinimum": 1,
+            "inclusiveMaximum": 65535
+          }
+        },
+        "required": [
+          "listeningPort",
+          "connectPort"
+        ]
+      }
+    },
+    "minikubeMounts": {
+      "type": "array",
+      "description": "Minikube mount specifications",
+      "items": {
+        "type": "object",
+        "properties": {
+          "hostPath": {
+            "type": "string",
+            "description": "A directory path on the host which will be mounted in the minikube filesystem"
+          },
+          "minikubePath": {
+            "type": "string",
+            "description": "A directory path in the minikube filesystem to be the mount point for the host directory"
+          }
+        },
+        "required": [
+          "hostPath",
+          "minikubePath"
+        ]
+      }
+    }
+  }
+}
