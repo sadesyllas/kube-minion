@@ -102,6 +102,10 @@
           "minikubePath"
         ]
       }
+    },
+    "defaultSocatConnectHost": {
+      "type": "string",
+      "description": "The default host at the receiving end of socat tunnels"
     }
   }
 }
