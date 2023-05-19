@@ -296,12 +296,46 @@ where
     T: FnOnce() -> CommandExecutionResult,
 {
     match f() {
+        Ok(ChildProcess(Some((child, _)))) => {
+            let mut child = child.lock().unwrap();
+            let mut output = String::new();
+
+            child
+                .stdout
+                .take()
+                .unwrap()
+                .read_to_string(&mut output)
+                .unwrap();
+
+            let output = output.trim();
+
+            if !output.is_empty() {
+                results.push(output.to_string());
+            }
+
+            let mut output = String::new();
+
+            child
+                .stderr
+                .take()
+                .unwrap()
+                .read_to_string(&mut output)
+                .unwrap();
+
+            let output = output.trim();
+
+            if !output.is_empty() {
+                results.push(output.to_string());
+            }
+
+            Ok(())
+        }
         Ok(PrintableResults(_, mut new_results)) => {
             results.append(&mut new_results);
             Ok(())
         }
-        Ok(ChildProcess(_)) => unreachable!(),
         Err(error) => Err(error),
+        _ => Ok(()),
     }
 }
 
