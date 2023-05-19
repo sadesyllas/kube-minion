@@ -35,6 +35,36 @@ pub fn build_delete_all_load_balancers_option() -> Result<(String, OptionFunc), 
     ))
 }
 
+pub fn create_load_balancer(
+    namespace: &str,
+    resource_type: &str,
+    name: &str,
+    port: u16,
+    target_port: u16,
+) -> CommandExecutionResult {
+    start_and_wait_process(
+        "kubectl",
+        &[
+            "-n",
+            namespace,
+            "expose",
+            resource_type,
+            name,
+            "--type",
+            "LoadBalancer",
+            "--name",
+            &(String::from(name) + "-lb"),
+            "--port",
+            &port.to_string(),
+            "--target-port",
+            &target_port.to_string(),
+            "-l",
+            "reason=kube-minion",
+        ],
+        None,
+    )
+}
+
 pub fn delete_all_load_balancers() -> CommandExecutionResult {
     let load_balancers = match fetch_load_balancers()? {
         ChildProcess(_) => unreachable!(),
@@ -155,36 +185,6 @@ fn create_load_balancer_guided() -> CommandExecutionResult {
     )?;
 
     create_load_balancer(&namespace, &resource_type, &name, port, target_port)
-}
-
-fn create_load_balancer(
-    namespace: &str,
-    resource_type: &str,
-    name: &str,
-    port: u16,
-    target_port: u16,
-) -> CommandExecutionResult {
-    start_and_wait_process(
-        "kubectl",
-        &[
-            "-n",
-            namespace,
-            "expose",
-            resource_type,
-            name,
-            "--type",
-            "LoadBalancer",
-            "--name",
-            &(String::from(name) + "-lb"),
-            "--port",
-            &port.to_string(),
-            "--target-port",
-            &target_port.to_string(),
-            "-l",
-            "reason=kube-minion",
-        ],
-        None,
-    )
 }
 
 fn delete_load_balancer_guided() -> CommandExecutionResult {

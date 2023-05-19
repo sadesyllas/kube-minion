@@ -1,14 +1,16 @@
 #![feature(default_free_fn)]
 #![feature(let_chains)]
+#![feature(if_let_guard)]
 
 mod clean_up_and_exit;
 mod dashboard;
+mod init_file;
 mod load_balancer;
 mod minikube_mount;
 mod minikube_tunnel;
 mod socat_tunnel;
 
-use std::io::{stdin, stdout, BufRead, Write};
+use std::io::{stderr, stdin, stdout, BufRead, Write};
 use std::str::FromStr;
 use std::{
     io::Read,
@@ -18,7 +20,9 @@ use std::{
 
 use sysinfo::{ProcessExt, ProcessRefreshKind, RefreshKind, System, SystemExt};
 
+pub use crate::clean_up_and_exit::clean_up_and_exit;
 pub use dashboard::create_kubernetes_dashboard_load_balancer;
+pub use init_file::run_init_file;
 pub use minikube_tunnel::create_minikube_tunnel;
 
 use crate::clean_up_and_exit::build_clean_up_and_exit_option;
@@ -31,7 +35,7 @@ use CommandResultType::*;
 
 type CommandExecutionResult = Result<CommandResultType, String>;
 
-type OptionFunc = Box<dyn Fn() -> CommandExecutionResult>;
+pub type OptionFunc = Box<dyn Fn() -> CommandExecutionResult>;
 
 pub enum CommandResultType {
     ChildProcess(Option<(Arc<Mutex<process::Child>>, ExitStatus)>),
@@ -76,28 +80,52 @@ pub fn verify_dependencies() -> Result<(), String> {
 }
 
 pub fn build_options() -> Result<Vec<(String, OptionFunc)>, String> {
+    let do_nothing: fn() -> OptionFunc = || Box::new(|| Ok(PrintableResults(None, Vec::new())));
+
     Ok(vec![
+        (String::from("# Dashboard"), do_nothing()),
         build_kubernetes_dashboard_option()?,
+        (String::from("# Minikube tunnel"), do_nothing()),
         build_minikube_tunnel_option()?,
+        (String::from("# Load balancers"), do_nothing()),
         build_create_load_balancer_option()?,
         build_fetch_load_balancers_option()?,
         build_delete_load_balancer_option()?,
         build_delete_all_load_balancers_option()?,
+        (String::from("# Socat tunnels"), do_nothing()),
         build_create_socat_tunnel_option()?,
         build_fetch_socat_tunnels_option()?,
         build_delete_socat_tunnel_option()?,
         build_delete_all_socat_tunnels_option()?,
         build_set_default_connect_host_option()?,
+        (String::from("# Minikube tunnels"), do_nothing()),
         build_create_minikube_mount_option()?,
         build_fetch_minikube_mounts_option()?,
         build_delete_minikube_mount_option()?,
         build_delete_all_minikube_mounts_option()?,
+        (
+            String::from("# Clean up and exit (Ctrl-C/SIGINT)"),
+            do_nothing(),
+        ),
         build_clean_up_and_exit_option()?,
     ])
 }
 
 pub fn get_sys_info() -> System {
     System::new_with_specifics(RefreshKind::new().with_processes(ProcessRefreshKind::everything()))
+}
+
+pub fn print_results(result: CommandExecutionResult, stdout: bool, stderr: bool) {
+    let (_, result_stdout, result_stderr) = process_exited_with_success(result);
+
+    if stdout && let Some(result_stdout) = result_stdout {
+        println!("{}", result_stdout.trim());
+    }
+    if stderr && let Some(result_stderr) = result_stderr {
+        eprintln!("{}", result_stderr.trim());
+    }
+
+    flush_output();
 }
 
 fn start_and_wait_process(
@@ -261,4 +289,23 @@ fn parse_num<T: FromStr>(
             .parse::<T>()
             .map_err(|_| format!("Failed to parse {input} as a number"))
     }
+}
+
+fn merge_if_ok<T>(results: &mut Vec<String>, f: T) -> Result<(), String>
+where
+    T: FnOnce() -> CommandExecutionResult,
+{
+    match f() {
+        Ok(PrintableResults(_, mut new_results)) => {
+            results.append(&mut new_results);
+            Ok(())
+        }
+        Ok(ChildProcess(_)) => unreachable!(),
+        Err(error) => Err(error),
+    }
+}
+
+fn flush_output() {
+    stdout().lock().flush().unwrap();
+    stderr().lock().flush().unwrap();
 }

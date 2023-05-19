@@ -4,7 +4,7 @@ use crate::minikube_mount::delete_all_minikube_mounts;
 use crate::minikube_tunnel::stop_minikube_tunnel;
 use crate::socat_tunnel::delete_all_socat_tunnels;
 use crate::CommandResultType::*;
-use crate::{CommandExecutionResult, OptionFunc};
+use crate::{merge_if_ok, CommandExecutionResult, OptionFunc};
 
 pub fn build_clean_up_and_exit_option() -> Result<(String, OptionFunc), String> {
     Ok((
@@ -13,42 +13,14 @@ pub fn build_clean_up_and_exit_option() -> Result<(String, OptionFunc), String> 
     ))
 }
 
-fn clean_up_and_exit() -> CommandExecutionResult {
-    delete_all_load_balancers()
-        .and_then(|result| match result {
-            PrintableResults(_, mut results) => match delete_all_socat_tunnels() {
-                Ok(PrintableResults(_, mut new_results)) => {
-                    results.append(&mut new_results);
-                    Ok(PrintableResults(None, results))
-                }
-                Ok(ChildProcess(_)) => unreachable!(),
-                Err(error) => Err(error),
-            },
-            ChildProcess(_) => unreachable!(),
-        })
-        .and_then(|result| match result {
-            PrintableResults(_, mut results) => match delete_all_minikube_mounts() {
-                Ok(PrintableResults(_, mut new_results)) => {
-                    results.append(&mut new_results);
-                    Ok(PrintableResults(None, results))
-                }
-                Ok(ChildProcess(_)) => unreachable!(),
-                Err(error) => Err(error),
-            },
-            ChildProcess(_) => unreachable!(),
-        })
-        .and_then(|result| match result {
-            PrintableResults(_, results) => {
-                delete_kubernetes_dashboard_load_balancer()?;
-                Ok(PrintableResults(None, results))
-            }
-            ChildProcess(_) => unreachable!(),
-        })
-        .and_then(|result| match result {
-            PrintableResults(_, results) => {
-                stop_minikube_tunnel()?;
-                Ok(PrintableResults(None, results))
-            }
-            ChildProcess(_) => unreachable!(),
-        })
+pub fn clean_up_and_exit() -> CommandExecutionResult {
+    let mut results: Vec<String> = Vec::new();
+
+    merge_if_ok(&mut results, delete_all_load_balancers)?;
+    merge_if_ok(&mut results, delete_all_socat_tunnels)?;
+    merge_if_ok(&mut results, delete_all_minikube_mounts)?;
+    delete_kubernetes_dashboard_load_balancer()?;
+    stop_minikube_tunnel()?;
+
+    Ok(PrintableResults(None, results))
 }

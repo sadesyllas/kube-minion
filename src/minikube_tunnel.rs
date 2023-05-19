@@ -3,7 +3,7 @@ use std::{thread, time::Duration};
 use sysinfo::{ProcessExt, SystemExt};
 
 use crate::{
-    get_sys_info, kill_process, start_and_wait_process, CommandExecutionResult,
+    get_sys_info, kill_process, print_results, start_and_wait_process, CommandExecutionResult,
     CommandResultType::*, OptionFunc,
 };
 
@@ -70,10 +70,14 @@ fn toggle_minikube_tunnel(running: bool) -> CommandExecutionResult {
         clear_minikube_ssh_tunnels()?;
 
         thread::spawn(move || {
-            let _ = start_and_wait_process(
-                "minikube",
-                &["tunnel", "-c", "--bind-address=127.0.0.1"],
-                Some(String::from("Could not start minikube tunnel")),
+            print_results(
+                start_and_wait_process(
+                    "minikube",
+                    &["tunnel", "-c", "--bind-address=127.0.0.1"],
+                    Some(String::from("Failed to start the minikube tunnel")),
+                ),
+                false,
+                true,
             );
         });
 

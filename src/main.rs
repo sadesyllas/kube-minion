@@ -1,8 +1,11 @@
+use regex::Regex;
 use std::io::{stdin, stdout, BufRead, Read, Write};
+use std::{process, sync, thread};
 
 use kube_minion::{
-    self, build_options, create_kubernetes_dashboard_load_balancer, create_minikube_tunnel,
-    verify_dependencies, CommandResultType::*,
+    self, build_options, clean_up_and_exit, create_kubernetes_dashboard_load_balancer,
+    create_minikube_tunnel, print_results, run_init_file, verify_dependencies,
+    CommandResultType::*, OptionFunc,
 };
 
 fn main() -> Result<(), String> {
@@ -12,7 +15,25 @@ fn main() -> Result<(), String> {
 
     create_minikube_tunnel().unwrap();
 
+    run_init_file()?;
+
+    let (tx, rx) = sync::mpsc::channel();
+
+    ctrlc::set_handler(move || tx.send(true).unwrap()).unwrap();
+
+    thread::spawn(move || {
+        if let Ok(true) = rx.recv() {
+            println!();
+
+            print_results(clean_up_and_exit(), true, true);
+
+            process::exit(0);
+        }
+    });
+
     let mut exit = false;
+
+    let option_description_header_re = Regex::new(r"^\s*#\s+(?<title>.+)").unwrap();
 
     loop {
         if exit {
@@ -24,14 +45,35 @@ fn main() -> Result<(), String> {
         println!("Options:");
         println!("\t0. Refresh options");
 
-        for (index, (description, _)) in options.iter().enumerate() {
-            println!("\t{}. {description}", index + 1);
+        let mut index = 0;
+        for (description, _) in options.iter() {
+            if option_description_header_re.is_match(description) {
+                let title = option_description_header_re
+                    .captures(description)
+                    .unwrap()
+                    .name("title")
+                    .unwrap()
+                    .as_str();
+
+                println!("\t=========================");
+                println!("\t{title}");
+                println!("\t-------------------------");
+            } else {
+                index += 1;
+
+                println!("\t{index}. {description}");
+            }
         }
 
         print!("\tOption: ");
         {
             stdout().lock().flush().unwrap();
         }
+
+        let actuable_options: Vec<&(String, OptionFunc)> = options
+            .iter()
+            .filter(|(description, _)| !option_description_header_re.is_match(description))
+            .collect();
 
         let mut option_index = String::new();
         {
@@ -51,20 +93,20 @@ fn main() -> Result<(), String> {
         };
 
         if option_index == 0 {
-            println!("Refreshing state...");
+            println!("Refreshing options...");
             continue;
         }
 
-        if option_index == options.len() {
+        if option_index == actuable_options.len() {
             exit = true;
         }
 
-        if option_index > options.len() {
+        if option_index > actuable_options.len() {
             eprintln!("Invalid option index provided");
             continue;
         }
 
-        let (_, func) = &options[option_index - 1];
+        let (_, func) = actuable_options.iter().nth(option_index - 1).unwrap();
 
         match func() {
             Ok(ChildProcess(Some((child, exit_status)))) => {

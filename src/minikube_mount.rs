@@ -4,8 +4,8 @@ use std::{fs, thread, time::Duration};
 use sysinfo::{ProcessExt, SystemExt};
 
 use crate::{
-    get_sys_info, parse_num, parse_string, start_and_wait_process, CommandExecutionResult,
-    CommandResultType::*, OptionFunc,
+    get_sys_info, parse_num, parse_string, print_results, start_and_wait_process,
+    CommandExecutionResult, CommandResultType::*, OptionFunc,
 };
 
 pub fn build_create_minikube_mount_option() -> Result<(String, OptionFunc), String> {
@@ -34,6 +34,51 @@ pub fn build_delete_all_minikube_mounts_option() -> Result<(String, OptionFunc),
         String::from("Delete all minikube mounts"),
         Box::new(delete_all_minikube_mounts),
     ))
+}
+
+pub fn create_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExecutionResult {
+    if !fs::metadata(host_path).map_err(|x| x.to_string())?.is_dir() {
+        return Err(format!("{host_path} is not a valid host directory path"));
+    }
+
+    {
+        let host_path = String::from(host_path);
+        let minikube_path = String::from(minikube_path);
+        thread::spawn(move || {
+            print_results(
+                start_and_wait_process(
+                    "minikube",
+                    &["mount", &format!("{host_path}:{minikube_path}")],
+                    Some(format!(
+                    "Failed to stop minikube mount from host path {host_path} to minikube path \
+                    {minikube_path}"
+                )),
+                ),
+                false,
+                true,
+            );
+        });
+    }
+
+    {
+        let sys_info = get_sys_info();
+        let mut cnt = 0;
+
+        while let None = check_minikube_mount(&sys_info, host_path, minikube_path) && cnt < 5 {
+            cnt += 1;
+            thread::sleep(Duration::from_secs(1));
+        }
+
+        if cnt == 5 {
+            return Err(String::from(
+                "Failed to verify if minikube mount has been created",
+            ));
+        }
+    }
+
+    println!("Created minikube mount from host path {host_path} to minikube path {minikube_path}");
+
+    Ok(PrintableResults(None, Vec::new()))
 }
 
 pub fn delete_all_minikube_mounts() -> CommandExecutionResult {
@@ -112,44 +157,6 @@ fn check_minikube_mount(
             cmd.contains("mount") && cmd.contains(&format!("{host_path}:{minikube_path}"))
         })
         .map(|x| x.pid())
-}
-
-fn create_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExecutionResult {
-    if !fs::metadata(host_path).map_err(|x| x.to_string())?.is_dir() {
-        return Err(format!("{host_path} is not a valid host directory path"));
-    }
-
-    {
-        let host_path = String::from(host_path);
-        let minikube_path = String::from(minikube_path);
-        thread::spawn(move || {
-            let _ = start_and_wait_process(
-                "minikube",
-                &["mount", &format!("{host_path}:{minikube_path}")],
-                Some(String::from("Could not create minikube mount")),
-            );
-        });
-    }
-
-    {
-        let sys_info = get_sys_info();
-        let mut cnt = 0;
-
-        while let None = check_minikube_mount(&sys_info, host_path, minikube_path) && cnt < 5 {
-            cnt += 1;
-            thread::sleep(Duration::from_secs(1));
-        }
-
-        if cnt == 5 {
-            return Err(String::from(
-                "Failed to verify if minikube mount has been created",
-            ));
-        }
-    }
-
-    println!("Created minikube mount from host path {host_path} to minikube path {minikube_path}");
-
-    Ok(PrintableResults(None, Vec::new()))
 }
 
 fn delete_minikube_mount_guided() -> CommandExecutionResult {

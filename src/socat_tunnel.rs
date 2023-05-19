@@ -4,8 +4,8 @@ use std::{thread, time::Duration};
 use sysinfo::{ProcessExt, SystemExt};
 
 use crate::{
-    get_sys_info, parse_num, parse_string, start_and_wait_process, CommandExecutionResult,
-    CommandResultType::*, OptionFunc,
+    get_sys_info, parse_num, parse_string, print_results, start_and_wait_process,
+    CommandExecutionResult, CommandResultType::*, OptionFunc,
 };
 
 static mut DEFAULT_CONNECT_HOST: Option<String> = None;
@@ -43,6 +43,69 @@ pub fn build_set_default_connect_host_option() -> Result<(String, OptionFunc), S
         String::from("Set socat default connect host"),
         Box::new(set_default_connect_host_guided),
     ))
+}
+
+pub fn create_socat_tunnel(
+    protocol: &str,
+    listening_port: u16,
+    connect_host: &str,
+    connect_port: u16,
+) -> CommandExecutionResult {
+    {
+        let protocol = String::from(protocol);
+        let connect_host = String::from(connect_host);
+        thread::spawn(move || {
+            print_results(
+                start_and_wait_process(
+                    "socat",
+                    &[
+                        "-lpkube-minion-socat",
+                        &format!("{protocol}-listen:{listening_port},fork,reuseaddr"),
+                        &format!("{protocol}:{connect_host}:{connect_port}"),
+                    ],
+                    Some(format!(
+                    "Failed to start socat tunnel listening on port {listening_port}/{protocol} \
+                    and connecting to {connect_host}:{connect_port}"
+                )),
+                ),
+                false,
+                true,
+            );
+        });
+    }
+
+    {
+        let sys_info = get_sys_info();
+        let mut cnt = 0;
+
+        while let None = check_socat_tunnel(&sys_info, listening_port, connect_host, connect_port) && cnt < 5 {
+            cnt += 1;
+            thread::sleep(Duration::from_secs(1));
+        }
+
+        if cnt == 5 {
+            return Err(String::from(
+                "Failed to verify if socat tunnel has been started",
+            ));
+        }
+    }
+
+    println!(
+        "Started socat tunnel listening on port {listening_port} \
+        and connecting to {connect_host}:{connect_port}"
+    );
+
+    Ok(PrintableResults(None, Vec::new()))
+}
+
+pub fn set_default_connect_host(connect_host: String) {
+    unsafe {
+        DEFAULT_CONNECT_HOST.replace(connect_host);
+    }
+
+    println!("Socat default connect host has been set to {}", unsafe {
+        DEFAULT_CONNECT_HOST.as_ref().unwrap()
+    });
 }
 
 pub fn delete_all_socat_tunnels() -> CommandExecutionResult {
@@ -146,52 +209,6 @@ fn check_socat_tunnel(
         .map(|x| x.pid())
 }
 
-fn create_socat_tunnel(
-    protocol: &str,
-    listening_port: u16,
-    connect_host: &str,
-    connect_port: u16,
-) -> CommandExecutionResult {
-    {
-        let protocol = String::from(protocol);
-        let connect_host = String::from(connect_host);
-        thread::spawn(move || {
-            let _ = start_and_wait_process(
-                "socat",
-                &[
-                    "-lpkube-minion-socat",
-                    &format!("{protocol}-listen:{listening_port},fork,reuseaddr"),
-                    &format!("{protocol}:{connect_host}:{connect_port}"),
-                ],
-                Some(String::from("Could not start socat tunnel")),
-            );
-        });
-    }
-
-    {
-        let sys_info = get_sys_info();
-        let mut cnt = 0;
-
-        while let None = check_socat_tunnel(&sys_info, listening_port, connect_host, connect_port) && cnt < 5 {
-            cnt += 1;
-            thread::sleep(Duration::from_secs(1));
-        }
-
-        if cnt == 5 {
-            return Err(String::from(
-                "Failed to verify if socat tunnel has been started",
-            ));
-        }
-    }
-
-    println!(
-        "Started socat tunnel listening on port {listening_port} \
-        and connecting to {connect_host}:{connect_port}"
-    );
-
-    Ok(PrintableResults(None, Vec::new()))
-}
-
 fn delete_socat_tunnel_guided() -> CommandExecutionResult {
     let index: usize = parse_num(
         "Index: ",
@@ -269,14 +286,4 @@ fn set_default_connect_host_guided() -> CommandExecutionResult {
     set_default_connect_host(connect_host);
 
     Ok(PrintableResults(None, Vec::new()))
-}
-
-fn set_default_connect_host(connect_host: String) {
-    unsafe {
-        DEFAULT_CONNECT_HOST.replace(connect_host);
-    }
-
-    println!("Socat default connect host has been set to {}", unsafe {
-        DEFAULT_CONNECT_HOST.as_ref().unwrap()
-    });
 }

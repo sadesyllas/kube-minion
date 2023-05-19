@@ -3,18 +3,18 @@
   "loadBalancers": [
     {
       "namespace": "default",
-      "resourceType": "pods",
+      "resourceType": "deployments",
       "name": "nginx",
-      "port": "8080",
-      "targetPort": "80"
+      "port": 8080,
+      "targetPort": 80
     }
   ],
   "socatTunnels": [
     {
       "protocol": "tcp",
-      "listeningPort": 80,
+      "listeningPort": 8888,
       "connectHost": "localhost",
-      "connectPort": 8008
+      "connectPort": 8080
     }
   ],
   "minikubeMounts": [
