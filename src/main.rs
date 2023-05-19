@@ -9,6 +9,8 @@ use kube_minion::{
 };
 
 fn main() -> Result<(), String> {
+    println!("Documentation URL: https://github.com/sadesyllas/kube-minion/blob/main/README.md");
+
     verify_dependencies()?;
 
     create_kubernetes_dashboard_load_balancer().unwrap();
@@ -23,7 +25,7 @@ fn main() -> Result<(), String> {
 
     thread::spawn(move || {
         if let Ok(true) = rx.recv() {
-            println!();
+            println!("\nReceived Ctrl-C/SIGINT. Exiting...");
 
             print_results(clean_up_and_exit(), true, true);
 

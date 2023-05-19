@@ -1,0 +1,131 @@
+# kube-minion
+
+A console application which is meant to be used with [minikube](https://minikube.sigs.k8s.io/docs/) and facilitates:
+
+* Exposing the [Kubernetes](https://kubernetes.io/) dashboard through a load balancer service
+* Starting the [minikube tunnel](https://minikube.sigs.k8s.io/docs/commands/tunnel/) in the background
+* Setting up load balancers for exposing applications from inside a [Kubernetes](https://kubernetes.io/) cluster
+* Setting up socat tunnels
+* Mounting directories from [minikube](https://minikube.sigs.k8s.io/docs/)'s host onto the
+  [minikube](https://minikube.sigs.k8s.io/docs/)'s filesystem
+
+## Prerequisites
+
+The following must be installed before using `kube-minion`.
+
+* [Docker Engine](https://docs.docker.com/engine/install/)
+* [minikube](https://minikube.sigs.k8s.io/docs/)
+* [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
+* [socat](https://www.redhat.com/sysadmin/getting-started-socat)
+* [SSH](https://www.ssh.com/academy/ssh)
+
+## How-to
+
+When starting, this application does the following:
+
+1. Checks whether or not all the prerequisites are present
+2. Creates a load balancer for the [Kubernetes](https://kubernetes.io/) dashboard, to be accessed at
+   http://localhost:51515
+3. Starts the [minikube tunnel](https://minikube.sigs.k8s.io/docs/commands/tunnel/)
+4. Checks whether or not an initialization file (eg, `kube-minion.json`) is present
+5. Starts the application's main loop
+
+The main part of this application is basically a loop which executes the following steps:
+
+1. Build a list of options for the user to choose from
+2. Display these options
+3. Let the user select an option
+4. Execute the function that is related with the selected option
+
+The options menu can be refreshed by selecting option `0`.
+
+The application can clean up everything and exit, either by selecting the last option in the options list,
+or by typing `Ctrl-C`.
+
+## Options
+
+0. **Refresh options**
+    * Start over from the top of the loop and rebuild the options list
+1. **Create/Delete [Kubernetes](https://kubernetes.io/) dashboard load balancer**
+    * Creates or deletes the load balancer that exposes the [Kubernetes](https://kubernetes.io/) dashboard at
+      http://localhost:51515
+2. **Start/Stop minikube tunnel**
+    * Starts or stops the [minikube tunnel](https://minikube.sigs.k8s.io/docs/commands/tunnel/)
+3. **Create load balancer**
+    * Creates a [Kubernetes](https://kubernetes.io/) load balancer to expose an application
+    * This requires the [minikube tunnel](https://minikube.sigs.k8s.io/docs/commands/tunnel/) to also be running for the
+      application to become reachable
+4. **List load balancers**
+    * Lists the [Kubernetes](https://kubernetes.io/) load balancers that have been created by `kube-minion`
+5. **Delete load balancer**
+    * Deletes a [Kubernetes](https://kubernetes.io/) load balancer that has been created by `kube-minion`
+6. **Delete all load balancers**
+    * Deletes all [Kubernetes](https://kubernetes.io/) load balancers that have been created by `kube-minion`
+7. **Create socat tunnel**
+    * Creates a [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnel
+    * This is useful when trying to access an application from the Windows environment while the application
+      has been proxied inside WSL
+8. **List socat tunnels**
+    * Lists the [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnels that have been created by
+      `kube-minion`
+9. **Delete socat tunnel**
+    * Deletes a [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnel that has been created by
+      `kube-minion`
+10. **Delete all socat tunnels**
+    * Deletes all [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnels that have been created by
+      `kube-minion`
+11. **Set socat default connect host**
+    * Sets the default [socat](https://www.redhat.com/sysadmin/getting-started-socat) connect host for connecting to the
+     receiving end of the [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnel
+    * By default, this is `localhost`
+    * This can be used to configure `kube-minion` to use the required WSL interface by default
+12. **Create minikube mount**
+     * Creates a [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)
+     * This can be used to mount a source code directory inside a pod and use `docker run` to start the application
+13. **List minikube mounts**
+     * Lists the [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)s that have been created by
+       `kube-minion`
+14. **Delete minikube mount**
+     * Deletes a [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/) that has been created by
+       `kube-minion`
+15. **Delete all minikube mounts**
+     * Deletes all [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)s that have been created by
+       `kube-minion`
+16. **Clean up and exit**
+    * Deletes the load balancer that exposes the [Kubernetes](https://kubernetes.io/) dashboard at
+      http://localhost:51515
+    * Deletes all [Kubernetes](https://kubernetes.io/) load balancers that have been created by `kube-minion`
+    * Deletes all [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnels that have been created by
+      `kube-minion`
+    * Deletes all [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)s that have been created by
+      `kube-minion`
+    * Exits the application
+
+## Configuration
+
+The application can be configured with an initialization file.
+
+This file is a JSON file for which, a
+[schema](https://raw.githubusercontent.com/sadesyllas/kube-minion/main/kube-minion.schema.json)
+has been provided.
+
+This schema exists in file `kube-minion.schema.json` and an exhaustive template
+exists in file `kube-minion.template.json`.
+
+#### Initialization file
+
+The initialization file is expected to be found in the same directory as the one in which
+`kube-minion` has been started in.
+
+This file can setup the following:
+
+* Load balancers to expose applications that run in [minikube](https://minikube.sigs.k8s.io/docs/)'s
+  [Kubernetes](https://kubernetes.io/) cluster.
+* [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnels
+* The default [socat](https://www.redhat.com/sysadmin/getting-started-socat) connect host at the tunnel's receiving end
+* [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)s 
+
+#### Environment variable `KUBE_MINION_ENVIRONMENT`
+
+This environment variable makes `kube-minion` search for an initialization file with a name of
+`kube-minion.$KUBE_MINION_ENVIRONMENT.json`, instead of the default name of `kube-minion.json`.
