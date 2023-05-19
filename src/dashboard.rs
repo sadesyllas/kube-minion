@@ -18,17 +18,12 @@ pub fn create_kubernetes_dashboard_load_balancer() -> Result<(), String> {
     Ok(())
 }
 
-pub fn delete_kubernetes_dashboard_load_balancer() -> Result<(), String> {
+pub fn delete_kubernetes_dashboard_load_balancer() -> CommandExecutionResult {
     if let Ok(true) = check_kubernetes_dashboard() {
-        let result = toggle_kubernetes_dashboard_load_balancer(true);
-
-        return match result {
-            Ok(_) => Ok(()),
-            Err(error) => Err(error),
-        };
+        toggle_kubernetes_dashboard_load_balancer(true)
+    } else {
+        Ok(PrintableResults(None, Vec::new()))
     }
-
-    Ok(())
 }
 
 pub fn build_kubernetes_dashboard_option() -> Result<(String, OptionFunc), String> {

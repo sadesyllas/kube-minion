@@ -98,7 +98,7 @@ pub fn build_options() -> Result<Vec<(String, OptionFunc)>, String> {
         build_delete_socat_tunnel_option()?,
         build_delete_all_socat_tunnels_option()?,
         build_set_default_connect_host_option()?,
-        (String::from("# Minikube tunnels"), do_nothing()),
+        (String::from("# Minikube mounts"), do_nothing()),
         build_create_minikube_mount_option()?,
         build_fetch_minikube_mounts_option()?,
         build_delete_minikube_mount_option()?,

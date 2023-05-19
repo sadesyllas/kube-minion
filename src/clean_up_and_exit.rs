@@ -16,11 +16,11 @@ pub fn build_clean_up_and_exit_option() -> Result<(String, OptionFunc), String> 
 pub fn clean_up_and_exit() -> CommandExecutionResult {
     let mut results: Vec<String> = Vec::new();
 
-    merge_if_ok(&mut results, delete_all_load_balancers)?;
-    merge_if_ok(&mut results, delete_all_socat_tunnels)?;
-    merge_if_ok(&mut results, delete_all_minikube_mounts)?;
-    delete_kubernetes_dashboard_load_balancer()?;
-    stop_minikube_tunnel()?;
+    let _ = merge_if_ok(&mut results, delete_all_load_balancers);
+    let _ = merge_if_ok(&mut results, delete_all_socat_tunnels);
+    let _ = merge_if_ok(&mut results, delete_all_minikube_mounts);
+    let _ = merge_if_ok(&mut results, delete_kubernetes_dashboard_load_balancer);
+    let _ = merge_if_ok(&mut results, stop_minikube_tunnel);
 
     Ok(PrintableResults(None, results))
 }

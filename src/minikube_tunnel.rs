@@ -22,17 +22,12 @@ pub fn create_minikube_tunnel() -> Result<(), String> {
     Ok(())
 }
 
-pub fn stop_minikube_tunnel() -> Result<(), String> {
+pub fn stop_minikube_tunnel() -> CommandExecutionResult {
     if let Ok(true) = check_minikube_tunnel() {
-        let result = toggle_minikube_tunnel(true);
-
-        return match result {
-            Ok(_) => Ok(()),
-            Err(error) => Err(error),
-        };
+        toggle_minikube_tunnel(true)
+    } else {
+        Ok(PrintableResults(None, Vec::new()))
     }
-
-    Ok(())
 }
 
 pub fn build_minikube_tunnel_option() -> Result<(String, OptionFunc), String> {
