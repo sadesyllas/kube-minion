@@ -18,19 +18,14 @@ fn main() -> Result<(), String> {
 
     run_init_file()?;
 
-    let (tx, rx) = sync::mpsc::channel();
-
-    ctrlc::set_handler(move || tx.send(true).unwrap()).unwrap();
-
-    thread::spawn(move || {
-        if let Ok(true) = rx.recv() {
-            println!("\nReceived Ctrl-C/SIGINT. Exiting...");
-
-            print_results(clean_up_and_exit(), true, true);
-
-            process::exit(0);
-        }
-    });
+    unsafe {
+        signal_hook::low_level::register(signal_hook::consts::SIGINT, || {
+            println!(
+                "\nSIGINT received. Please, use option 16 or option 17 to exit the application."
+            );
+        })
+        .map_err(|x| x.to_string())?
+    };
 
     let mut exit = false;
 
@@ -96,10 +91,6 @@ fn main() -> Result<(), String> {
         if option_index == 0 {
             println!("Refreshing options...");
             continue;
-        }
-
-        if option_index == actuable_options.len() {
-            exit = true;
         }
 
         if option_index > actuable_options.len() {
