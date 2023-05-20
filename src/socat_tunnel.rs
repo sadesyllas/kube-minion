@@ -10,38 +10,43 @@ use crate::{
 
 static mut DEFAULT_CONNECT_HOST: Option<String> = None;
 
-pub fn build_create_socat_tunnel_option() -> Result<(String, OptionFunc), String> {
+pub fn build_create_socat_tunnel_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("Create socat tunnel"),
         Box::new(create_socat_tunnel_guided),
+        false,
     ))
 }
 
-pub fn build_fetch_socat_tunnels_option() -> Result<(String, OptionFunc), String> {
+pub fn build_fetch_socat_tunnels_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("List socat tunnels"),
         Box::new(fetch_socat_tunnels),
+        false,
     ))
 }
 
-pub fn build_delete_socat_tunnel_option() -> Result<(String, OptionFunc), String> {
+pub fn build_delete_socat_tunnel_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("Delete socat tunnel"),
         Box::new(delete_socat_tunnel_guided),
+        false,
     ))
 }
 
-pub fn build_delete_all_socat_tunnels_option() -> Result<(String, OptionFunc), String> {
+pub fn build_delete_all_socat_tunnels_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("Delete all socat tunnels"),
         Box::new(delete_all_socat_tunnels),
+        false,
     ))
 }
 
-pub fn build_set_default_connect_host_option() -> Result<(String, OptionFunc), String> {
+pub fn build_set_default_connect_host_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("Set socat default connect host"),
         Box::new(set_default_connect_host_guided),
+        false,
     ))
 }
 

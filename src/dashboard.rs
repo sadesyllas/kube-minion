@@ -26,7 +26,7 @@ pub fn delete_kubernetes_dashboard_load_balancer() -> CommandExecutionResult {
     }
 }
 
-pub fn build_kubernetes_dashboard_option() -> Result<(String, OptionFunc), String> {
+pub fn build_kubernetes_dashboard_option() -> Result<(String, OptionFunc, bool), String> {
     let check_kubernetes_dashboard_result = check_kubernetes_dashboard();
 
     match check_kubernetes_dashboard_result {
@@ -36,6 +36,7 @@ pub fn build_kubernetes_dashboard_option() -> Result<(String, OptionFunc), Strin
             Ok((
                 format!("{next_state} kubernetes dashboard load balancer"),
                 Box::new(move || toggle_kubernetes_dashboard_load_balancer(running)),
+                false,
             ))
         }
         Err(error) => Err(format!(

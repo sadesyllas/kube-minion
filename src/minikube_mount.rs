@@ -8,31 +8,35 @@ use crate::{
     CommandExecutionResult, CommandResultType::*, OptionFunc,
 };
 
-pub fn build_create_minikube_mount_option() -> Result<(String, OptionFunc), String> {
+pub fn build_create_minikube_mount_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("Create minikube mount"),
         Box::new(create_minikube_mount_guided),
+        false,
     ))
 }
 
-pub fn build_fetch_minikube_mounts_option() -> Result<(String, OptionFunc), String> {
+pub fn build_fetch_minikube_mounts_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("List minikube mounts"),
         Box::new(fetch_minikube_mounts),
+        false,
     ))
 }
 
-pub fn build_delete_minikube_mount_option() -> Result<(String, OptionFunc), String> {
+pub fn build_delete_minikube_mount_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("Delete minikube mount"),
         Box::new(delete_minikube_mount_guided),
+        false,
     ))
 }
 
-pub fn build_delete_all_minikube_mounts_option() -> Result<(String, OptionFunc), String> {
+pub fn build_delete_all_minikube_mounts_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("Delete all minikube mounts"),
         Box::new(delete_all_minikube_mounts),
+        false,
     ))
 }
 

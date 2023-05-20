@@ -30,16 +30,15 @@ pub fn stop_minikube_tunnel() -> CommandExecutionResult {
     }
 }
 
-pub fn build_minikube_tunnel_option() -> Result<(String, OptionFunc), String> {
-    let check_minikube_tunnel_result = check_minikube_tunnel();
-
-    match check_minikube_tunnel_result {
+pub fn build_minikube_tunnel_option() -> Result<(String, OptionFunc, bool), String> {
+    match check_minikube_tunnel() {
         Ok(running) => {
             let next_state = if running { "Stop" } else { "Start" };
 
             Ok((
                 format!("{next_state} minikube tunnel"),
                 Box::new(move || toggle_minikube_tunnel(running)),
+                false,
             ))
         }
         Err(error) => Err(format!("Error in build_minikube_tunnel_option: {error}")),

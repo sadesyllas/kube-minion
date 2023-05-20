@@ -6,14 +6,11 @@ use crate::socat_tunnel::delete_all_socat_tunnels;
 use crate::CommandResultType::*;
 use crate::{merge_if_ok, CommandExecutionResult, OptionFunc};
 
-pub fn build_clean_up_and_exit_option() -> Result<(String, OptionFunc), String> {
-    Ok((
-        String::from("Clean up and exit"),
-        Box::new(clean_up_and_exit),
-    ))
+pub fn build_clean_up_and_exit_option() -> Result<(String, OptionFunc, bool), String> {
+    Ok((String::from("Clean up and exit"), Box::new(clean_up), true))
 }
 
-pub fn clean_up_and_exit() -> CommandExecutionResult {
+pub fn clean_up() -> CommandExecutionResult {
     let mut results: Vec<String> = Vec::new();
 
     let _ = merge_if_ok(&mut results, delete_all_load_balancers);

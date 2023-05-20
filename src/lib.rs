@@ -20,7 +20,7 @@ use std::{
 
 use sysinfo::{ProcessExt, ProcessRefreshKind, RefreshKind, System, SystemExt};
 
-pub use crate::clean_up_and_exit::clean_up_and_exit;
+pub use crate::clean_up_and_exit::clean_up;
 pub use dashboard::create_kubernetes_dashboard_load_balancer;
 pub use init_file::run_init_file;
 pub use minikube_tunnel::create_minikube_tunnel;
@@ -79,26 +79,26 @@ pub fn verify_dependencies() -> Result<(), String> {
     Ok(())
 }
 
-pub fn build_options() -> Result<Vec<(String, OptionFunc)>, String> {
+pub fn build_options() -> Result<Vec<(String, OptionFunc, bool)>, String> {
     let do_nothing: fn() -> OptionFunc = || Box::new(|| Ok(PrintableResults(None, Vec::new())));
 
     Ok(vec![
-        (String::from("# Dashboard"), do_nothing()),
+        (String::from("# Dashboard"), do_nothing(), false),
         build_kubernetes_dashboard_option()?,
-        (String::from("# Minikube tunnel"), do_nothing()),
+        (String::from("# Minikube tunnel"), do_nothing(), false),
         build_minikube_tunnel_option()?,
-        (String::from("# Load balancers"), do_nothing()),
+        (String::from("# Load balancers"), do_nothing(), false),
         build_create_load_balancer_option()?,
         build_fetch_load_balancers_option()?,
         build_delete_load_balancer_option()?,
         build_delete_all_load_balancers_option()?,
-        (String::from("# Socat tunnels"), do_nothing()),
+        (String::from("# Socat tunnels"), do_nothing(), false),
         build_create_socat_tunnel_option()?,
         build_fetch_socat_tunnels_option()?,
         build_delete_socat_tunnel_option()?,
         build_delete_all_socat_tunnels_option()?,
         build_set_default_connect_host_option()?,
-        (String::from("# Minikube mounts"), do_nothing()),
+        (String::from("# Minikube mounts"), do_nothing(), false),
         build_create_minikube_mount_option()?,
         build_fetch_minikube_mounts_option()?,
         build_delete_minikube_mount_option()?,
@@ -106,8 +106,10 @@ pub fn build_options() -> Result<Vec<(String, OptionFunc)>, String> {
         (
             String::from("# Clean up and exit (Ctrl-C/SIGINT)"),
             do_nothing(),
+            false,
         ),
         build_clean_up_and_exit_option()?,
+        (String::from("Exit without cleaning up"), do_nothing(), true),
     ])
 }
 
@@ -116,13 +118,44 @@ pub fn get_sys_info() -> System {
 }
 
 pub fn print_results(result: CommandExecutionResult, stdout: bool, stderr: bool) {
-    let (_, result_stdout, result_stderr) = process_exited_with_success(result);
+    match result {
+        Ok(ChildProcess(_)) => {
+            let (_, result_stdout, result_stderr) = process_exited_with_success(result);
 
-    if stdout && let Some(result_stdout) = result_stdout {
-        println!("{}", result_stdout.trim());
-    }
-    if stderr && let Some(result_stderr) = result_stderr {
-        eprintln!("{}", result_stderr.trim());
+            if stdout && let Some(result_stdout) = result_stdout {
+                println!("{}", result_stdout.trim());
+            }
+            if stderr && let Some(result_stderr) = result_stderr {
+                eprintln!("{}", result_stderr.trim());
+            }
+        }
+        Ok(PrintableResults(title, result)) => {
+            let printable_results: Vec<(usize, &String)> = result.iter().enumerate().collect();
+            let mut indentation = "";
+            let mut print_indexes = false;
+
+            if let Some(title) = title {
+                println!("{title}");
+
+                indentation = "\t";
+                print_indexes = true;
+            }
+
+            printable_results.iter().for_each(|(i, x)| {
+                let index = if print_indexes {
+                    format!("{}. ", i + 1)
+                } else {
+                    String::new()
+                };
+
+                println!("{indentation}{index}{x}");
+            });
+        }
+        Err(error) => {
+            if stderr {
+                eprintln!("{error}");
+            }
+        }
     }
 
     flush_output();

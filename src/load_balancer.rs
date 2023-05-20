@@ -7,31 +7,35 @@ use crate::{
 
 use regex::Regex;
 
-pub fn build_create_load_balancer_option() -> Result<(String, OptionFunc), String> {
+pub fn build_create_load_balancer_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("Create load balancer"),
         Box::new(create_load_balancer_guided),
+        false,
     ))
 }
 
-pub fn build_fetch_load_balancers_option() -> Result<(String, OptionFunc), String> {
+pub fn build_fetch_load_balancers_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("List load balancers"),
         Box::new(fetch_load_balancers),
+        false,
     ))
 }
 
-pub fn build_delete_load_balancer_option() -> Result<(String, OptionFunc), String> {
+pub fn build_delete_load_balancer_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("Delete load balancer"),
         Box::new(delete_load_balancer_guided),
+        false,
     ))
 }
 
-pub fn build_delete_all_load_balancers_option() -> Result<(String, OptionFunc), String> {
+pub fn build_delete_all_load_balancers_option() -> Result<(String, OptionFunc, bool), String> {
     Ok((
         String::from("Delete all load balancers"),
         Box::new(delete_all_load_balancers),
+        false,
     ))
 }
 
