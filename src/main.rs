@@ -1,10 +1,9 @@
 use regex::Regex;
 use std::io::{stdin, stdout, BufRead, Write};
-use std::{process, sync, thread};
 
 use kube_minion::{
-    self, build_options, clean_up, create_kubernetes_dashboard_load_balancer,
-    create_minikube_tunnel, print_results, run_init_file, verify_dependencies, OptionFunc,
+    self, build_options, create_kubernetes_dashboard_load_balancer, create_minikube_tunnel,
+    print_results, run_init_file, verify_dependencies, OptionFunc,
 };
 
 fn main() -> Result<(), String> {
@@ -66,7 +65,7 @@ fn main() -> Result<(), String> {
             stdout().lock().flush().unwrap();
         }
 
-        let actuable_options: Vec<&(String, OptionFunc, bool)> = options
+        let actionable_options: Vec<&(String, OptionFunc, bool)> = options
             .iter()
             .filter(|(description, _, _)| !option_description_header_re.is_match(description))
             .collect();
@@ -93,12 +92,12 @@ fn main() -> Result<(), String> {
             continue;
         }
 
-        if option_index > actuable_options.len() {
+        if option_index > actionable_options.len() {
             eprintln!("Invalid option index provided");
             continue;
         }
 
-        let (_, func, exit_after) = actuable_options.iter().nth(option_index - 1).unwrap();
+        let (_, func, exit_after) = actionable_options.iter().nth(option_index - 1).unwrap();
 
         exit = *exit_after;
 
