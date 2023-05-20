@@ -78,10 +78,10 @@ when exiting the application.
     * Sets the default [socat](https://www.redhat.com/sysadmin/getting-started-socat) connect host for connecting to the
      receiving end of the [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnel
     * By default, this is `localhost`
-    * This can be used to configure `kube-minion` to use the required WSL interface by default
+    * As an example, this can be used to configure `kube-minion` to use the required WSL interface by default
 12. **Create minikube mount**
      * Creates a [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)
-     * This can be used to mount a source code directory inside a pod and use `docker run` to start the application
+     * As an example, this can be used to mount a configuration or source code directory inside a pod
 13. **List minikube mounts**
      * Lists the [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)s that have been created by
        `kube-minion`
@@ -119,7 +119,7 @@ exists in file `kube-minion.template.json`.
 The initialization file is expected to be found in the same directory as the one in which
 `kube-minion` has been started in.
 
-This file can setup the following:
+This file can configure the following:
 
 * Load balancers to expose applications that run in [minikube](https://minikube.sigs.k8s.io/docs/)'s
   [Kubernetes](https://kubernetes.io/) cluster.
