@@ -103,11 +103,7 @@ pub fn build_options() -> Result<Vec<(String, OptionFunc, bool)>, String> {
         build_fetch_minikube_mounts_option()?,
         build_delete_minikube_mount_option()?,
         build_delete_all_minikube_mounts_option()?,
-        (
-            String::from("# Clean up and exit (Ctrl-C/SIGINT)"),
-            do_nothing(),
-            false,
-        ),
+        (String::from("# Clean up and exit"), do_nothing(), false),
         build_clean_up_and_exit_option()?,
         (String::from("Exit without cleaning up"), do_nothing(), true),
     ])

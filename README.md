@@ -39,8 +39,8 @@ The main part of this application is basically a loop which executes the followi
 
 The options menu can be refreshed by selecting option `0`.
 
-The application can clean up everything and exit, either by selecting the last option in the options list,
-or by typing `Ctrl-C`.
+The application ignores `Ctrl-C` (`SIGINT`), so that the user has to explicitly choose whether to clean up or not
+when exiting the application.
 
 ## Options
 
@@ -100,6 +100,8 @@ or by typing `Ctrl-C`.
     * Deletes all [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)s that have been created by
       `kube-minion`
     * Exits the application
+17. **Exit without cleaning up**
+    * Exits the application without the cleaning up done by **Clean up and exit**
 
 ## Configuration
 
