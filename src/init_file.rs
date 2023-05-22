@@ -2,6 +2,7 @@ use crate::load_balancer::create_load_balancer;
 use crate::minikube_mount::create_minikube_mount;
 use crate::socat_tunnel::{create_socat_tunnel, set_default_connect_host};
 use crate::{flush_output, print_results};
+use json_comments::StripComments;
 use std::fs::File;
 use std::io::Read;
 use std::{env, fs};
@@ -32,7 +33,9 @@ pub fn run_init_file() -> Result<(), String> {
         .read_to_string(&mut init_file_content)
         .unwrap();
 
-    let init_config: serde_json::Value = serde_json::from_str(&init_file_content)
+    let init_file_content_reader = StripComments::new(init_file_content.as_bytes());
+
+    let init_config: serde_json::Value = serde_json::from_reader(init_file_content_reader)
         .expect(&format!("{init_file_path} is not valid JSON"));
     let init_config = init_config
         .as_object()
