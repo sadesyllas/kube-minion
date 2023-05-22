@@ -3,6 +3,14 @@ use crate::{
     CommandResultType::*, OptionFunc,
 };
 
+static mut DASHBOARD_PORT: u16 = 51515;
+
+pub fn set_dashboard_port(port: u16) {
+    unsafe {
+        DASHBOARD_PORT = port;
+    }
+}
+
 pub fn create_kubernetes_dashboard_load_balancer() -> Result<(), String> {
     if let Ok(false) = check_kubernetes_dashboard() {
         let result = toggle_kubernetes_dashboard_load_balancer(false);
@@ -13,7 +21,10 @@ pub fn create_kubernetes_dashboard_load_balancer() -> Result<(), String> {
         };
     }
 
-    println!("The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:51515");
+    println!(
+        "The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:{}",
+        unsafe { DASHBOARD_PORT.to_string() }
+    );
 
     Ok(())
 }
@@ -43,6 +54,10 @@ pub fn build_kubernetes_dashboard_option() -> Result<(String, OptionFunc, bool),
             "Error in build_kubernetes_dashboard_option: {error}"
         )),
     }
+}
+
+fn get_dashboard_port() -> String {
+    unsafe { DASHBOARD_PORT.to_string() }
 }
 
 fn check_kubernetes_dashboard() -> Result<bool, String> {
@@ -111,7 +126,7 @@ fn toggle_kubernetes_dashboard_load_balancer(running: bool) -> CommandExecutionR
                 "--type",
                 "LoadBalancer",
                 "--port",
-                "51515",
+                &get_dashboard_port(),
                 "--target-port",
                 "9090",
                 "-l",
@@ -122,7 +137,10 @@ fn toggle_kubernetes_dashboard_load_balancer(running: bool) -> CommandExecutionR
 
         match process_exited_with_success(result) {
             (true, _, _) => {
-                println!("The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:51515");
+                println!(
+                    "The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:{}",
+                    get_dashboard_port()
+                );
 
                 Ok(PrintableResults(None, Vec::new()))
             }

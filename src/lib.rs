@@ -21,7 +21,7 @@ use std::{
 use sysinfo::{ProcessExt, ProcessRefreshKind, RefreshKind, System, SystemExt};
 
 pub use crate::clean_up_and_exit::clean_up;
-pub use dashboard::create_kubernetes_dashboard_load_balancer;
+pub use dashboard::{create_kubernetes_dashboard_load_balancer, set_dashboard_port};
 pub use init_file::run_init_file;
 pub use minikube_tunnel::create_minikube_tunnel;
 

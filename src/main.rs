@@ -1,13 +1,39 @@
+use args::Args;
+use getopts::Occur;
 use regex::Regex;
+use std::env;
 use std::io::{stdin, stdout, BufRead, Write};
 
 use kube_minion::{
     self, build_options, create_kubernetes_dashboard_load_balancer, create_minikube_tunnel,
-    print_results, run_init_file, verify_dependencies, OptionFunc,
+    print_results, run_init_file, set_dashboard_port, verify_dependencies, OptionFunc,
 };
 
 fn main() -> Result<(), String> {
-    println!("Documentation URL: https://github.com/sadesyllas/kube-minion/blob/main/README.md");
+    let mut args = Args::new(
+        "kube-minion",
+        "https://github.com/sadesyllas/kube-minion/blob/main/README.md",
+    );
+    args.flag("h", "help", "Print the usage menu");
+    args.option(
+        "",
+        "dashboard-port",
+        "The port on which to expose the Kubernetes dashboard load balancer",
+        "DASHBOARD_PORT",
+        Occur::Optional,
+        Some(String::from("51515")),
+    );
+    args.parse(env::args()).map_err(|x| x.to_string())?;
+
+    if args.value_of("help").unwrap_or_default() {
+        println!("{}", args.full_usage());
+        return Ok(());
+    }
+
+    let dashboard_port: u16 = args
+        .value_of("dashboard-port")
+        .expect("The provided value is not a valid u16");
+    set_dashboard_port(dashboard_port);
 
     verify_dependencies()?;
 
