@@ -105,7 +105,12 @@ when exiting the application.
 
 ## Configuration
 
-The application can be configured with an initialization file.
+To see the available command line options, use `kube-minion -h`.
+
+The `--dashboard-port` command line parameter sets the port on which to expose the [Kubernetes](https://kubernetes.io/)
+dashboard load balancer service.
+
+Additionally, the application can be configured with an initialization file.
 
 This file is a JSON file for which, a
 [schema](https://raw.githubusercontent.com/sadesyllas/kube-minion/main/kube-minion.schema.json)

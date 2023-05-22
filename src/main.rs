@@ -18,7 +18,7 @@ fn main() -> Result<(), String> {
     args.option(
         "",
         "dashboard-port",
-        "The port on which to expose the Kubernetes dashboard load balancer",
+        "The port on which to expose the Kubernetes dashboard load balancer service",
         "DASHBOARD_PORT",
         Occur::Optional,
         Some(String::from("51515")),
