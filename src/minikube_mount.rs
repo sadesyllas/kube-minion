@@ -45,6 +45,17 @@ pub fn create_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExe
         return Err(format!("{host_path} is not a valid host directory path"));
     }
 
+    let sys_info = get_sys_info();
+
+    if check_minikube_mount(&sys_info, host_path, minikube_path).is_some() {
+        println!(
+            "Minikube mount from host path {host_path} to minikube path {minikube_path} already \
+            exists"
+        );
+
+        return Ok(PrintableResults(None, Vec::new()));
+    }
+
     {
         let host_path = String::from(host_path);
         let minikube_path = String::from(minikube_path);
@@ -65,7 +76,6 @@ pub fn create_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExe
     }
 
     {
-        let sys_info = get_sys_info();
         let mut cnt = 0;
 
         while let None = check_minikube_mount(&sys_info, host_path, minikube_path) && cnt < 5 {
