@@ -48,12 +48,9 @@ pub fn create_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExe
     let sys_info = get_sys_info();
 
     if check_minikube_mount(&sys_info, host_path, minikube_path).is_some() {
-        println!(
-            "Minikube mount from host path {host_path} to minikube path {minikube_path} already \
-            exists"
-        );
-
-        return Ok(PrintableResults(None, Vec::new()));
+        return Ok(PrintableResults(None, vec![
+            format!("Minikube mount from host path {host_path} to minikube path {minikube_path} already exists")
+        ]));
     }
 
     {
@@ -90,9 +87,12 @@ pub fn create_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExe
         }
     }
 
-    println!("Created minikube mount from host path {host_path} to minikube path {minikube_path}");
-
-    Ok(PrintableResults(None, Vec::new()))
+    Ok(PrintableResults(
+        None,
+        vec![format!(
+            "Created minikube mount from host path {host_path} to minikube path {minikube_path}"
+        )],
+    ))
 }
 
 pub fn delete_all_minikube_mounts() -> CommandExecutionResult {

@@ -95,22 +95,19 @@ pub fn create_socat_tunnel(
         }
     }
 
-    println!(
-        "Started socat tunnel listening on port {listening_port} \
-        and connecting to {connect_host}:{connect_port}"
-    );
-
-    Ok(PrintableResults(None, Vec::new()))
+    Ok(PrintableResults(None, vec![
+        format!("Started socat tunnel listening on port {listening_port} and connecting to {connect_host}:{connect_port}")
+    ]))
 }
 
-pub fn set_default_connect_host(connect_host: String) {
+pub fn set_default_connect_host(connect_host: String) -> String {
     unsafe {
         DEFAULT_CONNECT_HOST.replace(connect_host);
     }
 
-    println!("Socat default connect host has been set to {}", unsafe {
+    format!("Socat default connect host has been set to {}", unsafe {
         DEFAULT_CONNECT_HOST.as_ref().unwrap()
-    });
+    })
 }
 
 pub fn delete_all_socat_tunnels() -> CommandExecutionResult {
@@ -288,7 +285,8 @@ fn set_default_connect_host_guided() -> CommandExecutionResult {
         )),
     )?;
 
-    set_default_connect_host(connect_host);
-
-    Ok(PrintableResults(None, Vec::new()))
+    Ok(PrintableResults(
+        None,
+        vec![set_default_connect_host(connect_host)],
+    ))
 }

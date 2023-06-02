@@ -210,7 +210,7 @@ fn kill_process(name: &str, patterns: Vec<&str>) -> CommandExecutionResult {
     {
         Err(format!("Failed to kill {name} with patterns {patterns:?}"))
     } else {
-        Ok(ChildProcess(None))
+        Ok(PrintableResults(None, Vec::new()))
     }
 }
 
@@ -280,7 +280,7 @@ fn parse_string(
             return Ok(default_value);
         }
 
-        return Err(String::from("An empty value is not allowed"));
+        Err(String::from("An empty value is not allowed"))
     } else {
         Ok(String::from(input))
     }
@@ -312,7 +312,7 @@ fn parse_num<T: FromStr>(
             return Ok(default_value);
         }
 
-        return Err(String::from("An empty value is not allowed"));
+        Err(String::from("An empty value is not allowed"))
     } else {
         input
             .parse::<T>()
@@ -320,6 +320,8 @@ fn parse_num<T: FromStr>(
     }
 }
 
+/// It takes a closure that is expected to execute a command and return its result.
+/// If the result is Ok, it appends the command's results to the `results` vector argument.
 fn merge_if_ok<T>(results: &mut Vec<String>, f: T) -> Result<(), String>
 where
     T: FnOnce() -> CommandExecutionResult,

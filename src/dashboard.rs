@@ -11,26 +11,22 @@ pub fn set_dashboard_port(port: u16) {
     }
 }
 
-pub fn create_kubernetes_dashboard_load_balancer() -> Result<(), String> {
-    if let Ok(false) = check_kubernetes_dashboard() {
-        let result = toggle_kubernetes_dashboard_load_balancer(false);
-
-        return match result {
-            Ok(_) => Ok(()),
-            Err(error) => Err(error),
-        };
+pub fn create_kubernetes_dashboard_load_balancer() -> CommandExecutionResult {
+    if check_kubernetes_dashboard().is_err() {
+        toggle_kubernetes_dashboard_load_balancer(false)
+    } else {
+        Ok(PrintableResults(
+            None,
+            vec![format!(
+                "The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:{}",
+                unsafe { DASHBOARD_PORT.to_string() }
+            )],
+        ))
     }
-
-    println!(
-        "The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:{}",
-        unsafe { DASHBOARD_PORT.to_string() }
-    );
-
-    Ok(())
 }
 
 pub fn delete_kubernetes_dashboard_load_balancer() -> CommandExecutionResult {
-    if let Ok(true) = check_kubernetes_dashboard() {
+    if check_kubernetes_dashboard().is_ok() {
         toggle_kubernetes_dashboard_load_balancer(true)
     } else {
         Ok(PrintableResults(None, Vec::new()))
@@ -40,27 +36,23 @@ pub fn delete_kubernetes_dashboard_load_balancer() -> CommandExecutionResult {
 pub fn build_kubernetes_dashboard_option() -> Result<(String, OptionFunc, bool), String> {
     let check_kubernetes_dashboard_result = check_kubernetes_dashboard();
 
-    match check_kubernetes_dashboard_result {
-        Ok(running) => {
-            let next_state = if running { "Delete" } else { "Create" };
+    let (running, next_option) = match check_kubernetes_dashboard_result {
+        Ok(_) => (true, "Delete"),
+        _ => (false, "Create"),
+    };
 
-            Ok((
-                format!("{next_state} kubernetes dashboard load balancer"),
-                Box::new(move || toggle_kubernetes_dashboard_load_balancer(running)),
-                false,
-            ))
-        }
-        Err(error) => Err(format!(
-            "Error in build_kubernetes_dashboard_option: {error}"
-        )),
-    }
+    Ok((
+        format!("{next_option} kubernetes dashboard load balancer"),
+        Box::new(move || toggle_kubernetes_dashboard_load_balancer(running)),
+        false,
+    ))
 }
 
 fn get_dashboard_port() -> String {
     unsafe { DASHBOARD_PORT.to_string() }
 }
 
-fn check_kubernetes_dashboard() -> Result<bool, String> {
+fn check_kubernetes_dashboard() -> CommandExecutionResult {
     let result = start_and_wait_process(
         "kubectl",
         &[
@@ -75,13 +67,11 @@ fn check_kubernetes_dashboard() -> Result<bool, String> {
     );
 
     match process_exited_with_success(result) {
-        (true, _, _) => Ok(true),
-        (false, _, Some(_)) => Ok(false),
-        (false, _, _) => {
-            eprintln!("Failed to check if the kubernetes dashboard load balancer exists");
-
-            Ok(false)
-        }
+        (true, _, _) => Ok(PrintableResults(None, Vec::new())),
+        (false, _, Some(error)) => Err(error),
+        (false, _, _) => Err(String::from(
+            "Failed to check if the kubernetes dashboard load balancer exists",
+        )),
     }
 }
 
@@ -102,11 +92,12 @@ fn toggle_kubernetes_dashboard_load_balancer(running: bool) -> CommandExecutionR
         );
 
         match process_exited_with_success(result) {
-            (true, _, _) => {
-                println!("The kubernetes dashboard load balancer has been deleted");
-
-                Ok(PrintableResults(None, Vec::new()))
-            }
+            (true, _, _) => Ok(PrintableResults(
+                None,
+                vec![String::from(
+                    "The kubernetes dashboard load balancer has been deleted",
+                )],
+            )),
             (false, _, Some(error)) => Err(error),
             (false, _, _) => Err(String::from(
                 "Failed to delete the kubernetes dashboard load balancer",
@@ -136,14 +127,13 @@ fn toggle_kubernetes_dashboard_load_balancer(running: bool) -> CommandExecutionR
         );
 
         match process_exited_with_success(result) {
-            (true, _, _) => {
-                println!(
+            (true, _, _) => Ok(PrintableResults(
+                None,
+                vec![format!(
                     "The kubernetes dashboard load balancer can be accessed at http://127.0.0.1:{}",
                     get_dashboard_port()
-                );
-
-                Ok(PrintableResults(None, Vec::new()))
-            }
+                )],
+            )),
             (false, _, Some(error)) => Err(error),
             (false, _, _) => Err(String::from(
                 "Failed to create the kubernetes dashboard load balancer",

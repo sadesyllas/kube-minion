@@ -10,6 +10,11 @@ pub fn build_clean_up_and_exit_option() -> Result<(String, OptionFunc, bool), St
     Ok((String::from("Clean up and exit"), Box::new(clean_up), true))
 }
 
+/// Deletes resources created by `kube-minion`
+/// * All load balancers, including the Kubernetes dashboard load balancer
+/// * All socat tunnels
+/// * All minikube mounts
+/// * The minikube tunnel
 pub fn clean_up() -> CommandExecutionResult {
     let mut results: Vec<String> = Vec::new();
 

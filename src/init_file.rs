@@ -126,7 +126,7 @@ pub fn run_init_file() -> Result<(), String> {
             .expect("defaultSocatConnectHost must be a valid JSON string value")
             .to_string();
 
-        set_default_connect_host(default_socat_connect_host);
+        println!("{}", set_default_connect_host(default_socat_connect_host));
         flush_output();
     }
 

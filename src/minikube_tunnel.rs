@@ -7,19 +7,15 @@ use crate::{
     CommandResultType::*, OptionFunc,
 };
 
-pub fn create_minikube_tunnel() -> Result<(), String> {
+pub fn create_minikube_tunnel() -> CommandExecutionResult {
     if let Ok(false) = check_minikube_tunnel() {
-        let result = toggle_minikube_tunnel(false);
-
-        return match result {
-            Ok(_) => Ok(()),
-            Err(error) => Err(error),
-        };
+        toggle_minikube_tunnel(false)
+    } else {
+        Ok(PrintableResults(
+            None,
+            vec![String::from("The minikube tunnel has been started")],
+        ))
     }
-
-    println!("The minikube tunnel has been started");
-
-    Ok(())
 }
 
 pub fn stop_minikube_tunnel() -> CommandExecutionResult {
@@ -53,13 +49,16 @@ fn check_minikube_tunnel() -> Result<bool, String> {
 
 fn toggle_minikube_tunnel(running: bool) -> CommandExecutionResult {
     if running {
-        let result = kill_process("minikube", vec!["tunnel"]);
+        if let error @ Err(_) = kill_process("minikube", vec!["tunnel"]) {
+            return error;
+        }
 
         clear_minikube_ssh_tunnels()?;
 
-        println!("The minikube tunnel has been stopped");
-
-        result
+        Ok(PrintableResults(
+            None,
+            vec![String::from("The minikube tunnel has been stopped")],
+        ))
     } else {
         clear_minikube_ssh_tunnels()?;
 
@@ -90,9 +89,10 @@ fn toggle_minikube_tunnel(running: bool) -> CommandExecutionResult {
             }
         }
 
-        println!("The minikube tunnel has been started");
-
-        Ok(PrintableResults(None, Vec::new()))
+        Ok(PrintableResults(
+            None,
+            vec![String::from("The minikube tunnel has been started")],
+        ))
     }
 }
 

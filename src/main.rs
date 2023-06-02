@@ -37,9 +37,15 @@ fn main() -> Result<(), String> {
 
     verify_dependencies()?;
 
-    create_kubernetes_dashboard_load_balancer().unwrap();
+    match create_kubernetes_dashboard_load_balancer() {
+        results @ Ok(_) => print_results(results, true, true),
+        Err(error) => return Err(error),
+    };
 
-    create_minikube_tunnel().unwrap();
+    match create_minikube_tunnel() {
+        results @ Ok(_) => print_results(results, true, true),
+        Err(error) => return Err(error),
+    };
 
     run_init_file()?;
 
