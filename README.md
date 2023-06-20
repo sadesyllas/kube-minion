@@ -102,6 +102,9 @@ when exiting the application.
     * Exits the application
 17. **Exit without cleaning up**
     * Exits the application without the cleaning up done by **Clean up and exit**
+18. **Clean up initialization file configuration and exit** (available only when an
+    [initialization file](#configuration) has been found)
+    * Undoes all the configuration that has been specified in the found [initialization file](#configuration)
 
 ## Configuration
 
@@ -130,7 +133,7 @@ This file can configure the following:
   [Kubernetes](https://kubernetes.io/) cluster.
 * [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnels
 * The default [socat](https://www.redhat.com/sysadmin/getting-started-socat) connect host at the tunnel's receiving end
-* [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)s 
+* [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)s
 
 #### Environment variable `KUBE_MINION_ENVIRONMENT`
 

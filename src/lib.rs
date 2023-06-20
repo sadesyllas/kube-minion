@@ -18,6 +18,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use init_file::build_clean_up_init_file_option;
 use sysinfo::{ProcessExt, ProcessRefreshKind, RefreshKind, System, SystemExt};
 
 pub use crate::clean_up_and_exit::clean_up;
@@ -79,34 +80,44 @@ pub fn verify_dependencies() -> Result<(), String> {
     Ok(())
 }
 
-pub fn build_options() -> Result<Vec<(String, OptionFunc, bool)>, String> {
+pub fn build_options(
+    init_file_path: Option<&String>,
+) -> Result<Vec<(String, OptionFunc, bool)>, String> {
     let do_nothing: fn() -> OptionFunc = || Box::new(|| Ok(PrintableResults(None, Vec::new())));
 
     Ok(vec![
-        (String::from("# Dashboard"), do_nothing(), false),
-        build_kubernetes_dashboard_option()?,
-        (String::from("# Minikube tunnel"), do_nothing(), false),
-        build_minikube_tunnel_option()?,
-        (String::from("# Load balancers"), do_nothing(), false),
-        build_create_load_balancer_option()?,
-        build_fetch_load_balancers_option()?,
-        build_delete_load_balancer_option()?,
-        build_delete_all_load_balancers_option()?,
-        (String::from("# Socat tunnels"), do_nothing(), false),
-        build_create_socat_tunnel_option()?,
-        build_fetch_socat_tunnels_option()?,
-        build_delete_socat_tunnel_option()?,
-        build_delete_all_socat_tunnels_option()?,
-        build_set_default_connect_host_option()?,
-        (String::from("# Minikube mounts"), do_nothing(), false),
-        build_create_minikube_mount_option()?,
-        build_fetch_minikube_mounts_option()?,
-        build_delete_minikube_mount_option()?,
-        build_delete_all_minikube_mounts_option()?,
-        (String::from("# Clean up and exit"), do_nothing(), false),
-        build_clean_up_and_exit_option()?,
-        (String::from("Exit without cleaning up"), do_nothing(), true),
-    ])
+        Some((String::from("# Dashboard"), do_nothing(), false)),
+        Some(build_kubernetes_dashboard_option()?),
+        Some((String::from("# Minikube tunnel"), do_nothing(), false)),
+        Some(build_minikube_tunnel_option()?),
+        Some((String::from("# Load balancers"), do_nothing(), false)),
+        Some(build_create_load_balancer_option()?),
+        Some(build_fetch_load_balancers_option()?),
+        Some(build_delete_load_balancer_option()?),
+        Some(build_delete_all_load_balancers_option()?),
+        Some((String::from("# Socat tunnels"), do_nothing(), false)),
+        Some(build_create_socat_tunnel_option()?),
+        Some(build_fetch_socat_tunnels_option()?),
+        Some(build_delete_socat_tunnel_option()?),
+        Some(build_delete_all_socat_tunnels_option()?),
+        Some(build_set_default_connect_host_option()?),
+        Some((String::from("# Minikube mounts"), do_nothing(), false)),
+        Some(build_create_minikube_mount_option()?),
+        Some(build_fetch_minikube_mounts_option()?),
+        Some(build_delete_minikube_mount_option()?),
+        Some(build_delete_all_minikube_mounts_option()?),
+        Some((String::from("# Clean up and exit"), do_nothing(), false)),
+        Some(build_clean_up_and_exit_option()?),
+        Some((String::from("Exit without cleaning up"), do_nothing(), true)),
+        if let Some(init_file_path) = init_file_path {
+            Some(build_clean_up_init_file_option(init_file_path)?)
+        } else {
+            None
+        },
+    ]
+    .into_iter()
+    .flatten()
+    .collect())
 }
 
 pub fn get_sys_info() -> System {

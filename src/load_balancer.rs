@@ -1,8 +1,8 @@
 use std::io::Read;
 
 use crate::{
-    parse_num, parse_string, start_and_wait_process, CommandExecutionResult, CommandResultType::*,
-    OptionFunc,
+    merge_if_ok, parse_num, parse_string, start_and_wait_process, CommandExecutionResult,
+    CommandResultType::*, OptionFunc,
 };
 
 use regex::Regex;
@@ -69,6 +69,16 @@ pub fn create_load_balancer(
     )
 }
 
+pub fn delete_load_balancer(namespace: &str, name: &str) -> CommandExecutionResult {
+    let mut results: Vec<String> = Vec::new();
+
+    merge_if_ok(&mut results, || {
+        start_and_wait_process("kubectl", &["-n", namespace, "delete", "svc", name], None)
+    })?;
+
+    Ok(PrintableResults(None, results))
+}
+
 pub fn delete_all_load_balancers() -> CommandExecutionResult {
     let load_balancers = match fetch_load_balancers()? {
         ChildProcess(_) => unreachable!(),
@@ -80,34 +90,7 @@ pub fn delete_all_load_balancers() -> CommandExecutionResult {
     for load_balancer in &load_balancers {
         let (namespace, name) = parse_load_balancer(load_balancer);
 
-        let result =
-            start_and_wait_process("kubectl", &["-n", &namespace, "delete", "svc", &name], None)?;
-
-        match result {
-            ChildProcess(Some((child, exit_status))) => {
-                if !exit_status.success() {
-                    return Ok(ChildProcess(Some((child, exit_status))));
-                }
-
-                let mut output = String::new();
-
-                child
-                    .lock()
-                    .unwrap()
-                    .stdout
-                    .take()
-                    .unwrap()
-                    .read_to_string(&mut output)
-                    .unwrap();
-
-                let output = output.trim();
-
-                if !output.is_empty() {
-                    results.push(String::from(output));
-                }
-            }
-            _ => unreachable!(),
-        }
+        merge_if_ok(&mut results, || delete_load_balancer(&namespace, &name))?;
     }
 
     Ok(PrintableResults(None, results))
@@ -195,13 +178,15 @@ fn delete_load_balancer_guided() -> CommandExecutionResult {
     let index: usize = parse_num(
         "Index: ",
         None,
-        Some(format!("An index is required to delete a load balancer")),
+        Some(String::from(
+            "An index is required to delete a load balancer",
+        )),
     )?;
 
-    delete_load_balancer(index - 1)
+    delete_load_balancer_by_index(index - 1)
 }
 
-fn delete_load_balancer(index: usize) -> CommandExecutionResult {
+fn delete_load_balancer_by_index(index: usize) -> CommandExecutionResult {
     let load_balancers = match fetch_load_balancers()? {
         ChildProcess(_) => unreachable!(),
         PrintableResults(_, results) => results,

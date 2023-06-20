@@ -47,7 +47,7 @@ fn main() -> Result<(), String> {
         Err(error) => return Err(error),
     };
 
-    run_init_file()?;
+    let init_file_path = run_init_file()?;
 
     unsafe {
         signal_hook::low_level::register(signal_hook::consts::SIGINT, || {
@@ -60,6 +60,7 @@ fn main() -> Result<(), String> {
 
     let mut exit = false;
 
+    #[allow(clippy::invalid_regex)] // clippy bug?
     let option_description_header_re = Regex::new(r"^\s*#\s+(?<title>.+)").unwrap();
 
     loop {
@@ -67,7 +68,7 @@ fn main() -> Result<(), String> {
             break;
         }
 
-        let options = build_options()?;
+        let options = build_options(init_file_path.as_ref())?;
 
         println!("Options:");
         println!("\t0. Refresh options");
@@ -129,7 +130,7 @@ fn main() -> Result<(), String> {
             continue;
         }
 
-        let (_, func, exit_after) = actionable_options.iter().nth(option_index - 1).unwrap();
+        let (_, func, exit_after) = actionable_options[option_index - 1];
 
         exit = *exit_after;
 

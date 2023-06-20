@@ -4,7 +4,7 @@ use std::{fs, thread, time::Duration};
 use sysinfo::{ProcessExt, SystemExt};
 
 use crate::{
-    get_sys_info, parse_num, parse_string, print_results, start_and_wait_process,
+    get_sys_info, merge_if_ok, parse_num, parse_string, print_results, start_and_wait_process,
     CommandExecutionResult, CommandResultType::*, OptionFunc,
 };
 
@@ -95,20 +95,12 @@ pub fn create_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExe
     ))
 }
 
-pub fn delete_all_minikube_mounts() -> CommandExecutionResult {
-    let minikube_mounts = match fetch_minikube_mounts()? {
-        ChildProcess(_) => unreachable!(),
-        PrintableResults(_, results) => results,
-    };
-
+pub fn delete_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExecutionResult {
     let sys_info = get_sys_info();
 
     let mut results: Vec<String> = Vec::new();
 
-    for minikube_mount in &minikube_mounts {
-        let (host_path, minikube_path) = parse_minikube_mount(minikube_mount);
-
-        if let Some(pid) = check_minikube_mount(&sys_info, &host_path, &minikube_path) &&
+    if let Some(pid) = check_minikube_mount(&sys_info, host_path, minikube_path) &&
             let Some(process) = get_sys_info().process(pid) {
             if process.kill_with(sysinfo::Signal::Interrupt).is_some() {
                 results.push(format!("Stopped minikube mount from host path {host_path} to minikube path {minikube_path}"));
@@ -116,6 +108,24 @@ pub fn delete_all_minikube_mounts() -> CommandExecutionResult {
                 results.push(format!("Failed to stop minikube mount from host path {host_path} to minikube path {minikube_path}"));
             }
         }
+
+    Ok(PrintableResults(None, results))
+}
+
+pub fn delete_all_minikube_mounts() -> CommandExecutionResult {
+    let minikube_mounts = match fetch_minikube_mounts()? {
+        ChildProcess(_) => unreachable!(),
+        PrintableResults(_, results) => results,
+    };
+
+    let mut results: Vec<String> = Vec::new();
+
+    for minikube_mount in &minikube_mounts {
+        let (host_path, minikube_path) = parse_minikube_mount(minikube_mount);
+
+        merge_if_ok(&mut results, || {
+            delete_minikube_mount(&host_path, &minikube_path)
+        })?;
     }
 
     Ok(PrintableResults(None, results))
@@ -177,13 +187,15 @@ fn delete_minikube_mount_guided() -> CommandExecutionResult {
     let index: usize = parse_num(
         "Index: ",
         None,
-        Some(format!("An index is required to delete a minikube mount")),
+        Some(String::from(
+            "An index is required to delete a minikube mount",
+        )),
     )?;
 
-    delete_minikube_mount(index - 1)
+    delete_minikube_mount_by_index(index - 1)
 }
 
-fn delete_minikube_mount(index: usize) -> CommandExecutionResult {
+fn delete_minikube_mount_by_index(index: usize) -> CommandExecutionResult {
     let minikube_mounts = match fetch_minikube_mounts()? {
         ChildProcess(_) => unreachable!(),
         PrintableResults(_, results) => results,
@@ -211,6 +223,7 @@ fn delete_minikube_mount(index: usize) -> CommandExecutionResult {
     Ok(PrintableResults(None, results))
 }
 
+#[allow(clippy::invalid_regex)] // clippy bug?
 fn parse_minikube_mount(spec: &str) -> (String, String) {
     let re = Regex::new(r".+?\s+(?<host_path>[^:]+):(?<minikube_path>[^:]+)$").unwrap();
     let captures = re.captures(spec).unwrap();

@@ -4,7 +4,7 @@ use std::{thread, time::Duration};
 use sysinfo::{ProcessExt, SystemExt};
 
 use crate::{
-    get_sys_info, parse_num, parse_string, print_results, start_and_wait_process,
+    get_sys_info, merge_if_ok, parse_num, parse_string, print_results, start_and_wait_process,
     CommandExecutionResult, CommandResultType::*, OptionFunc,
 };
 
@@ -100,6 +100,31 @@ pub fn create_socat_tunnel(
     ]))
 }
 
+pub fn delete_socat_tunnel(
+    listening_port: u16,
+    connect_host: &str,
+    connect_port: u16,
+) -> CommandExecutionResult {
+    let sys_info = get_sys_info();
+
+    let mut results: Vec<String> = Vec::new();
+
+    if let Some(pid) = check_socat_tunnel(&sys_info, listening_port, connect_host, connect_port) &&
+            let Some(process) = get_sys_info().process(pid) {
+            if process.kill() {
+                results.push(format!(
+                    "Stopped socat tunnel listening on port {listening_port} \
+                    and connecting to {connect_host}:{connect_port}", ));
+            } else {
+                results.push(format!(
+                    "Failed to stop socat tunnel listening on port {listening_port} \
+                    and connecting to {connect_host}:{connect_port}", ));
+            }
+        }
+
+    Ok(PrintableResults(None, results))
+}
+
 pub fn set_default_connect_host(connect_host: String) -> String {
     unsafe {
         DEFAULT_CONNECT_HOST.replace(connect_host);
@@ -116,25 +141,14 @@ pub fn delete_all_socat_tunnels() -> CommandExecutionResult {
         PrintableResults(_, results) => results,
     };
 
-    let sys_info = get_sys_info();
-
     let mut results: Vec<String> = Vec::new();
 
     for socat_tunnel in &socat_tunnels {
         let (listening_port, connect_host, connect_port) = parse_socat_tunnel(socat_tunnel);
 
-        if let Some(pid) = check_socat_tunnel(&sys_info, listening_port, &connect_host, connect_port) &&
-            let Some(process) = get_sys_info().process(pid) {
-            if process.kill() {
-                results.push(format!(
-                    "Stopped socat tunnel listening on port {listening_port} \
-                    and connecting to {connect_host}:{connect_port}", ));
-            } else {
-                results.push(format!(
-                    "Failed to stop socat tunnel listening on port {listening_port} \
-                    and connecting to {connect_host}:{connect_port}", ));
-            }
-        }
+        merge_if_ok(&mut results, || {
+            delete_socat_tunnel(listening_port, &connect_host, connect_port)
+        })?;
     }
 
     Ok(PrintableResults(None, results))
@@ -215,13 +229,15 @@ fn delete_socat_tunnel_guided() -> CommandExecutionResult {
     let index: usize = parse_num(
         "Index: ",
         None,
-        Some(format!("An index is required to delete a socat tunnel")),
+        Some(String::from(
+            "An index is required to delete a socat tunnel",
+        )),
     )?;
 
-    delete_socat_tunnel(index - 1)
+    delete_socat_tunnel_by_index(index - 1)
 }
 
-fn delete_socat_tunnel(index: usize) -> CommandExecutionResult {
+fn delete_socat_tunnel_by_index(index: usize) -> CommandExecutionResult {
     let socat_tunnels = match fetch_socat_tunnels()? {
         ChildProcess(_) => unreachable!(),
         PrintableResults(_, results) => results,
@@ -251,6 +267,7 @@ fn delete_socat_tunnel(index: usize) -> CommandExecutionResult {
     Ok(PrintableResults(None, results))
 }
 
+#[allow(clippy::invalid_regex)] // clippy bug?
 fn parse_socat_tunnel(spec: &str) -> (u16, String, u16) {
     let re = Regex::new(
         r".+?-listen:(?<listening_port>[0-9]+).+?:(?<connect_host>.+):(?<connect_port>[0-9]+)$",
