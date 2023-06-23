@@ -8,8 +8,8 @@ use std::fs::File;
 use std::io::Read;
 use std::{env, fs};
 
-pub fn run_init_file() -> Result<Option<String>, String> {
-    let init_file_path = get_init_file_path();
+pub fn run_init_file(path: Option<String>) -> Result<Option<String>, String> {
+    let init_file_path = get_init_file_path(path);
 
     if init_file_path.is_none() {
         return Ok(None);
@@ -176,17 +176,21 @@ fn clean_up_init_file(init_file_path: String) -> CommandExecutionResult {
     Ok(PrintableResults(None, Vec::new()))
 }
 
-fn get_init_file_path() -> Option<String> {
-    let init_file_environment_part = match env::var("KUBE_MINION_ENVIRONMENT") {
-        Ok(envvar) => {
-            println!("The KUBE_MINION_ENVIRONMENT environment variable has been set to {envvar}");
+fn get_init_file_path(path: Option<String>) -> Option<String> {
+    let init_file_path = path.unwrap_or_else(|| {
+        let init_file_environment_part = match env::var("KUBE_MINION_ENVIRONMENT") {
+            Ok(envvar) => {
+                println!(
+                    "The KUBE_MINION_ENVIRONMENT environment variable has been set to {envvar}"
+                );
 
-            format!(".{envvar}")
-        }
-        Err(_) => String::new(),
-    };
+                format!(".{envvar}")
+            }
+            Err(_) => String::new(),
+        };
 
-    let init_file_path = format!("./kube-minion{init_file_environment_part}.json");
+        format!("./kube-minion{init_file_environment_part}.json")
+    });
 
     match fs::metadata(&init_file_path) {
         Ok(metadata) if metadata.is_file() => Some(init_file_path),

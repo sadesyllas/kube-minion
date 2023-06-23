@@ -16,12 +16,20 @@ fn main() -> Result<(), String> {
     );
     args.flag("h", "help", "Print the usage menu");
     args.option(
-        "",
+        "p",
         "dashboard-port",
         "The port on which to expose the Kubernetes dashboard load balancer service",
         "DASHBOARD_PORT",
         Occur::Optional,
         Some(String::from("51515")),
+    );
+    args.option(
+        "f",
+        "initialization-file-path",
+        "The path to an initialization file",
+        "INITIALIZATION_FILE_PATH",
+        Occur::Optional,
+        None,
     );
     args.parse(env::args()).map_err(|x| x.to_string())?;
 
@@ -47,7 +55,7 @@ fn main() -> Result<(), String> {
         Err(error) => return Err(error),
     };
 
-    let init_file_path = run_init_file()?;
+    let init_file_path = run_init_file(args.value_of::<String>("initialization-file-path").ok())?;
 
     unsafe {
         signal_hook::low_level::register(signal_hook::consts::SIGINT, || {

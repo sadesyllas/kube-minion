@@ -110,8 +110,12 @@ when exiting the application.
 
 To see the available command line options, use `kube-minion -h`.
 
-The `--dashboard-port` command line parameter sets the port on which to expose the [Kubernetes](https://kubernetes.io/)
-dashboard load balancer service.
+The `-p | --dashboard-port` command line parameter sets the port on which to expose the
+[Kubernetes](https://kubernetes.io/) dashboard load balancer service.
+
+The `-f | --initialization-file-path` command line parameter sets the initialization file from which to read initial
+configuration. When used, the [KUBE_MINION_ENVIRONMENT](#environment-variable-kube_minion_environment) environment
+variable is not considered.
 
 Additionally, the application can be configured with an initialization file.
 
