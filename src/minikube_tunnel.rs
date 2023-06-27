@@ -8,14 +8,16 @@ use crate::{
 };
 
 pub fn create_minikube_tunnel() -> CommandExecutionResult {
-    if let Ok(false) = check_minikube_tunnel() {
-        toggle_minikube_tunnel(false)
-    } else {
-        Ok(PrintableResults(
-            None,
-            vec![String::from("The minikube tunnel has been started")],
-        ))
+    if let Ok(true) = check_minikube_tunnel() {
+        toggle_minikube_tunnel(true)?;
     }
+
+    toggle_minikube_tunnel(false)?;
+
+    Ok(PrintableResults(
+        None,
+        vec![String::from("The minikube tunnel has been started")],
+    ))
 }
 
 pub fn stop_minikube_tunnel() -> CommandExecutionResult {
