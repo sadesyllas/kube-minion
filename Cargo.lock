@@ -120,7 +120,7 @@ checksum = "41ee439ee368ba4a77ac70d04f14015415af8600d6c894dc1f11bd79758c57d5"
 
 [[package]]
 name = "kube-minion"
-version = "0.1.0"
+version = "0.11.0"
 dependencies = [
  "args",
  "getopts",
