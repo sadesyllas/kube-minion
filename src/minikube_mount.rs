@@ -45,9 +45,7 @@ pub fn create_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExe
         return Err(format!("{host_path} is not a valid host directory path"));
     }
 
-    let sys_info = get_sys_info();
-
-    if check_minikube_mount(&sys_info, host_path, minikube_path).is_some() {
+    if check_minikube_mount(host_path, minikube_path).is_some() {
         return Ok(PrintableResults(None, vec![
             format!("Minikube mount from host path {host_path} to minikube path {minikube_path} already exists")
         ]));
@@ -75,7 +73,7 @@ pub fn create_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExe
     {
         let mut cnt = 0;
 
-        while let None = check_minikube_mount(&sys_info, host_path, minikube_path) && cnt < 5 {
+        while let None = check_minikube_mount(host_path, minikube_path) && cnt < 5 {
             cnt += 1;
             thread::sleep(Duration::from_secs(1));
         }
@@ -96,11 +94,9 @@ pub fn create_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExe
 }
 
 pub fn delete_minikube_mount(host_path: &str, minikube_path: &str) -> CommandExecutionResult {
-    let sys_info = get_sys_info();
-
     let mut results: Vec<String> = Vec::new();
 
-    if let Some(pid) = check_minikube_mount(&sys_info, host_path, minikube_path) &&
+    if let Some(pid) = check_minikube_mount(host_path, minikube_path) &&
             let Some(process) = get_sys_info().process(pid) {
             if process.kill_with(sysinfo::Signal::Interrupt).is_some() {
                 results.push(format!("Stopped minikube mount from host path {host_path} to minikube path {minikube_path}"));
@@ -168,12 +164,8 @@ fn create_minikube_mount_guided() -> CommandExecutionResult {
     create_minikube_mount(&host_path, &minikube_path)
 }
 
-fn check_minikube_mount(
-    sys_info: &sysinfo::System,
-    host_path: &str,
-    minikube_path: &str,
-) -> Option<sysinfo::Pid> {
-    sys_info
+fn check_minikube_mount(host_path: &str, minikube_path: &str) -> Option<sysinfo::Pid> {
+    get_sys_info()
         .processes_by_name("minikube")
         .find(|x| {
             let cmd = x.cmd().join(" ");
@@ -209,11 +201,9 @@ fn delete_minikube_mount_by_index(index: usize) -> CommandExecutionResult {
 
     let (host_path, minikube_path) = parse_minikube_mount(&minikube_mounts[index]);
 
-    let sys_info = get_sys_info();
-
     let mut results: Vec<String> = Vec::new();
 
-    if let Some(pid) = check_minikube_mount(&sys_info, &host_path, &minikube_path) &&
+    if let Some(pid) = check_minikube_mount(&host_path, &minikube_path) &&
         let Some(process) = get_sys_info().process(pid) &&
         process.kill_with(sysinfo::Signal::Interrupt).is_some() {
         results.push(format!("Stopped minikube mount from host path {host_path} to minikube path {minikube_path}"));
