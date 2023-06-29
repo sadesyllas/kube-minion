@@ -57,7 +57,7 @@ pub fn create_load_balancer(
             "--type",
             "LoadBalancer",
             "--name",
-            &(String::from(name) + "-lb"),
+            &(String::from(name) + &format!("-{port}-{target_port}-lb")),
             "--port",
             &port.to_string(),
             "--target-port",

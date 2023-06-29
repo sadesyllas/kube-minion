@@ -129,10 +129,14 @@ fn clean_up_init_file(init_file_path: String) -> CommandExecutionResult {
         println!("Cleaning up configuration from initialization file section: loadBalancers");
 
         for LoadBalancerConfig {
-            namespace, name, ..
+            namespace,
+            name,
+            port,
+            target_port,
+            ..
         } in load_balancers
         {
-            let name = format!("{name}-lb");
+            let name = format!("{name}-{port}-{target_port}-lb");
             print_results(delete_load_balancer(&namespace, &name), true, true);
             flush_output();
         }
