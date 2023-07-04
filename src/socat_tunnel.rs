@@ -58,7 +58,12 @@ pub fn create_socat_tunnel(
 ) -> CommandExecutionResult {
     {
         let protocol = String::from(protocol);
-        let connect_host = String::from(connect_host);
+
+        let connect_host = match connect_host {
+            "" => unsafe { DEFAULT_CONNECT_HOST.clone().unwrap() },
+            connect_host => String::from(connect_host),
+        };
+
         thread::spawn(move || {
             print_results(
                 start_and_wait_process(
@@ -105,6 +110,11 @@ pub fn delete_socat_tunnel(
     connect_host: &str,
     connect_port: u16,
 ) -> CommandExecutionResult {
+    let connect_host = match connect_host {
+        "" => unsafe { DEFAULT_CONNECT_HOST.as_ref().unwrap() },
+        connect_host => connect_host,
+    };
+
     let sys_info = get_sys_info();
 
     let mut results: Vec<String> = Vec::new();

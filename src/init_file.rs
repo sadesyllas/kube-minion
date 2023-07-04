@@ -41,6 +41,16 @@ pub fn run_init_file(path: Option<String>) -> Result<Option<String>, String> {
         }
     }
 
+    if let Some(default_socat_connect_host) = init_config.get("defaultSocatConnectHost") {
+        let default_socat_connect_host = default_socat_connect_host
+            .as_str()
+            .expect("defaultSocatConnectHost must be a valid JSON string value")
+            .to_string();
+
+        println!("{}", set_default_connect_host(default_socat_connect_host));
+        flush_output();
+    }
+
     if let Some(socat_tunnels) = parse_socat_tunnels(&init_config) {
         println!("Processing initialization file section: socatTunnels");
 
@@ -75,16 +85,6 @@ pub fn run_init_file(path: Option<String>) -> Result<Option<String>, String> {
             );
             flush_output();
         }
-    }
-
-    if let Some(default_socat_connect_host) = init_config.get("defaultSocatConnectHost") {
-        let default_socat_connect_host = default_socat_connect_host
-            .as_str()
-            .expect("defaultSocatConnectHost must be a valid JSON string value")
-            .to_string();
-
-        println!("{}", set_default_connect_host(default_socat_connect_host));
-        flush_output();
     }
 
     Ok(Some(init_file_path))
@@ -140,6 +140,16 @@ fn clean_up_init_file(init_file_path: String) -> CommandExecutionResult {
             print_results(delete_load_balancer(&namespace, &name), true, true);
             flush_output();
         }
+    }
+
+    if let Some(default_socat_connect_host) = init_config.get("defaultSocatConnectHost") {
+        let default_socat_connect_host = default_socat_connect_host
+            .as_str()
+            .expect("defaultSocatConnectHost must be a valid JSON string value")
+            .to_string();
+
+        println!("{}", set_default_connect_host(default_socat_connect_host));
+        flush_output();
     }
 
     if let Some(socat_tunnels) = parse_socat_tunnels(&init_config) {
@@ -319,7 +329,7 @@ fn parse_socat_tunnels(
                 panic!("protocol must be either tcp or udp");
             }
             let listening_port = get_json_u16(socat_tunnel, "listeningPort", None);
-            let connect_host = get_json_string(socat_tunnel, "connectHost", None);
+            let connect_host = get_json_string(socat_tunnel, "connectHost", Some(""));
             let connect_port = get_json_u16(socat_tunnel, "connectPort", None);
 
             socat_tunnels.push(SocatTunnelConfig {
