@@ -60,7 +60,7 @@ pub fn create_socat_tunnel(
         let protocol = String::from(protocol);
 
         let connect_host = match connect_host {
-            "" => unsafe { DEFAULT_CONNECT_HOST.clone().unwrap() },
+            "" => get_default_connect_host(),
             connect_host => String::from(connect_host),
         };
 
@@ -111,15 +111,15 @@ pub fn delete_socat_tunnel(
     connect_port: u16,
 ) -> CommandExecutionResult {
     let connect_host = match connect_host {
-        "" => unsafe { DEFAULT_CONNECT_HOST.as_ref().unwrap() },
-        connect_host => connect_host,
+        "" => get_default_connect_host(),
+        connect_host => String::from(connect_host),
     };
 
     let sys_info = get_sys_info();
 
     let mut results: Vec<String> = Vec::new();
 
-    if let Some(pid) = check_socat_tunnel(&sys_info, listening_port, connect_host, connect_port) &&
+    if let Some(pid) = check_socat_tunnel(&sys_info, listening_port, &connect_host, connect_port) &&
             let Some(process) = get_sys_info().process(pid) {
             if process.kill() {
                 results.push(format!(
@@ -197,12 +197,11 @@ fn create_socat_tunnel_guided() -> CommandExecutionResult {
     )?;
 
     let connect_host = parse_string(
-        "Connect host (leave empty for localhost): ",
-        Some(String::from(unsafe {
-            DEFAULT_CONNECT_HOST
-                .as_ref()
-                .unwrap_or(&String::from("localhost"))
-        })),
+        &format!(
+            "Connect host (leave empty for {}): ",
+            get_default_connect_host()
+        ),
+        Some(get_default_connect_host()),
         None,
     )?;
 
@@ -316,4 +315,12 @@ fn set_default_connect_host_guided() -> CommandExecutionResult {
         None,
         vec![set_default_connect_host(connect_host)],
     ))
+}
+
+fn get_default_connect_host() -> String {
+    String::from(unsafe {
+        DEFAULT_CONNECT_HOST
+            .as_ref()
+            .unwrap_or(&String::from("localhost"))
+    })
 }
