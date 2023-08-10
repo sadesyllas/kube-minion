@@ -13,7 +13,7 @@
     {
       "protocol": "tcp",
       "listeningPort": 8888,
-      "connectHost": "localhost",
+      // "connectHost": "localhost",
       "connectPort": 8080
     }
   ],
@@ -23,6 +23,6 @@
       "minikubePath": "/data/foo"
     }
   ],
-  "defaultSocatConnectHost": "192.168.160.1",
+  "defaultSocatConnectHost": "localhost",
   "minikubeTunnelBindAddress": "0.0.0.0"
 }

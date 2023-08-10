@@ -1,4 +1,3 @@
-#![feature(default_free_fn)]
 #![feature(let_chains)]
 #![feature(if_let_guard)]
 
@@ -90,6 +89,7 @@ pub fn build_options(
         Some(build_kubernetes_dashboard_option()?),
         Some((String::from("# Minikube tunnel"), do_nothing(), false)),
         Some(build_minikube_tunnel_option()?),
+        Some(build_set_bind_address_option()?),
         Some((String::from("# Load balancers"), do_nothing(), false)),
         Some(build_create_load_balancer_option()?),
         Some(build_fetch_load_balancers_option()?),

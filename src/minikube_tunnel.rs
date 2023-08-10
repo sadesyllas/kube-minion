@@ -3,9 +3,11 @@ use std::{thread, time::Duration};
 use sysinfo::{ProcessExt, SystemExt};
 
 use crate::{
-    get_sys_info, kill_process, print_results, start_and_wait_process, CommandExecutionResult,
-    CommandResultType::*, OptionFunc,
+    get_sys_info, kill_process, merge_if_ok, parse_string, print_results, start_and_wait_process,
+    CommandExecutionResult, CommandResultType::*, OptionFunc,
 };
+
+static mut BIND_ADDRESS: Option<String> = None;
 
 pub fn create_minikube_tunnel() -> CommandExecutionResult {
     if let Ok(true) = check_minikube_tunnel() {
@@ -16,7 +18,10 @@ pub fn create_minikube_tunnel() -> CommandExecutionResult {
 
     Ok(PrintableResults(
         None,
-        vec![String::from("The minikube tunnel has been started")],
+        vec![format!(
+            "The minikube tunnel has been started and bound to {}",
+            get_bind_address()
+        )],
     ))
 }
 
@@ -41,6 +46,37 @@ pub fn build_minikube_tunnel_option() -> Result<(String, OptionFunc, bool), Stri
         }
         Err(error) => Err(format!("Error in build_minikube_tunnel_option: {error}")),
     }
+}
+
+pub fn build_set_bind_address_option() -> Result<(String, OptionFunc, bool), String> {
+    Ok((
+        String::from("Set the minikube tunnel bind address"),
+        Box::new(set_bind_address_guided),
+        false,
+    ))
+}
+
+pub fn set_bind_address(bind_address: String) -> CommandExecutionResult {
+    if get_bind_address() == bind_address {
+        return Ok(PrintableResults(None, Vec::new()));
+    }
+
+    unsafe {
+        BIND_ADDRESS.replace(bind_address);
+    }
+
+    let mut results: Vec<String> = Vec::new();
+
+    results.push(format!(
+        "The minikube tunnel bind address has been set to {}",
+        unsafe { BIND_ADDRESS.as_ref().unwrap() }
+    ));
+
+    if let Ok(true) = check_minikube_tunnel() {
+        let _ = merge_if_ok(&mut results, create_minikube_tunnel);
+    }
+
+    Ok(PrintableResults(None, results))
 }
 
 fn check_minikube_tunnel() -> Result<bool, String> {
@@ -68,7 +104,7 @@ fn toggle_minikube_tunnel(running: bool) -> CommandExecutionResult {
             print_results(
                 start_and_wait_process(
                     "minikube",
-                    &["tunnel", "-c", "--bind-address=127.0.0.1"],
+                    &["tunnel", "-c", "--bind-address", &get_bind_address()],
                     Some(String::from("Failed to start the minikube tunnel")),
                 ),
                 false,
@@ -93,7 +129,10 @@ fn toggle_minikube_tunnel(running: bool) -> CommandExecutionResult {
 
         Ok(PrintableResults(
             None,
-            vec![String::from("The minikube tunnel has been started")],
+            vec![format!(
+                "The minikube tunnel has been started and bound to {}",
+                get_bind_address()
+            )],
         ))
     }
 }
@@ -118,4 +157,20 @@ fn clear_minikube_ssh_tunnels() -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn set_bind_address_guided() -> CommandExecutionResult {
+    let bind_address = parse_string(
+        "Bind address: ",
+        None,
+        Some(String::from(
+            "No address provided as the minikube tunnel default bind address",
+        )),
+    )?;
+
+    set_bind_address(bind_address)
+}
+
+fn get_bind_address() -> String {
+    String::from(unsafe { BIND_ADDRESS.as_ref().unwrap_or(&String::from("127.0.0.1")) })
 }

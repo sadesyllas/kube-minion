@@ -45,6 +45,8 @@ fn main() -> Result<(), String> {
 
     verify_dependencies()?;
 
+    let init_file_path = run_init_file(args.value_of::<String>("initialization-file-path").ok())?;
+
     match create_kubernetes_dashboard_load_balancer() {
         results @ Ok(_) => print_results(results, true, true),
         Err(error) => return Err(error),
@@ -54,8 +56,6 @@ fn main() -> Result<(), String> {
         results @ Ok(_) => print_results(results, true, true),
         Err(error) => return Err(error),
     };
-
-    let init_file_path = run_init_file(args.value_of::<String>("initialization-file-path").ok())?;
 
     unsafe {
         signal_hook::low_level::register(signal_hook::consts::SIGINT, || {

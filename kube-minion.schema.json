@@ -106,6 +106,10 @@
     "defaultSocatConnectHost": {
       "type": "string",
       "description": "The default host at the receiving end of socat tunnels"
+    },
+    "minikubeTunnelBindAddress": {
+      "type": "string",
+      "description": "The address on which to bind the minikube tunnel"
     }
   }
 }

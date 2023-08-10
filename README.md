@@ -51,47 +51,50 @@ when exiting the application.
       http://localhost:51515
 2. **Start/Stop minikube tunnel**
     * Starts or stops the [minikube tunnel](https://minikube.sigs.k8s.io/docs/commands/tunnel/)
-3. **Create load balancer**
+3. **Set the minikube tunnel bind address**
+    * Sets the [minikube tunnel](https://minikube.sigs.k8s.io/docs/commands/tunnel/) bind address and restarts it if it
+      is already started.
+4. **Create load balancer**
     * Creates a [Kubernetes](https://kubernetes.io/) load balancer to expose an application
     * This requires the [minikube tunnel](https://minikube.sigs.k8s.io/docs/commands/tunnel/) to also be running for the
       application to become reachable
-4. **List load balancers**
+5. **List load balancers**
     * Lists the [Kubernetes](https://kubernetes.io/) load balancers that have been created by `kube-minion`
-5. **Delete load balancer**
+6. **Delete load balancer**
     * Deletes a [Kubernetes](https://kubernetes.io/) load balancer that has been created by `kube-minion`
-6. **Delete all load balancers**
+7. **Delete all load balancers**
     * Deletes all [Kubernetes](https://kubernetes.io/) load balancers that have been created by `kube-minion`
-7. **Create socat tunnel**
+8. **Create socat tunnel**
     * Creates a [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnel
     * This is useful when trying to access an application from the Windows environment while the application
       has been proxied inside WSL
-8. **List socat tunnels**
+9. **List socat tunnels**
     * Lists the [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnels that have been created by
       `kube-minion`
-9. **Delete socat tunnel**
+10. **Delete socat tunnel**
     * Deletes a [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnel that has been created by
       `kube-minion`
-10. **Delete all socat tunnels**
+11. **Delete all socat tunnels**
     * Deletes all [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnels that have been created by
       `kube-minion`
-11. **Set socat default connect host**
+12. **Set socat default connect host**
     * Sets the default [socat](https://www.redhat.com/sysadmin/getting-started-socat) connect host for connecting to the
      receiving end of the [socat](https://www.redhat.com/sysadmin/getting-started-socat) tunnel
     * By default, this is `localhost`
     * As an example, this can be used to configure `kube-minion` to use the required WSL interface by default
-12. **Create minikube mount**
+13. **Create minikube mount**
      * Creates a [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)
      * As an example, this can be used to mount a configuration or source code directory inside a pod
-13. **List minikube mounts**
+14. **List minikube mounts**
      * Lists the [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)s that have been created by
        `kube-minion`
-14. **Delete minikube mount**
+15. **Delete minikube mount**
      * Deletes a [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/) that has been created by
        `kube-minion`
-15. **Delete all minikube mounts**
+16. **Delete all minikube mounts**
      * Deletes all [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)s that have been created by
        `kube-minion`
-16. **Clean up and exit**
+17. **Clean up and exit**
     * Deletes the load balancer that exposes the [Kubernetes](https://kubernetes.io/) dashboard at
       http://localhost:51515
     * Deletes all [Kubernetes](https://kubernetes.io/) load balancers that have been created by `kube-minion`
@@ -100,9 +103,9 @@ when exiting the application.
     * Deletes all [minikube mount](https://minikube.sigs.k8s.io/docs/commands/mount/)s that have been created by
       `kube-minion`
     * Exits the application
-17. **Exit without cleaning up**
+18. **Exit without cleaning up**
     * Exits the application without the cleaning up done by **Clean up and exit**
-18. **Clean up initialization file configuration and exit** (available only when an
+19. **Clean up initialization file configuration and exit** (available only when an
     [initialization file](#configuration) has been found)
     * Undoes all the configuration that has been specified in the found [initialization file](#configuration)
 

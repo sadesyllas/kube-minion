@@ -1,5 +1,6 @@
 use crate::load_balancer::{create_load_balancer, delete_load_balancer};
 use crate::minikube_mount::{create_minikube_mount, delete_minikube_mount};
+use crate::minikube_tunnel::set_bind_address;
 use crate::socat_tunnel::{create_socat_tunnel, delete_socat_tunnel, set_default_connect_host};
 use crate::CommandResultType::PrintableResults;
 use crate::{flush_output, print_results, CommandExecutionResult, OptionFunc};
@@ -85,6 +86,20 @@ pub fn run_init_file(path: Option<String>) -> Result<Option<String>, String> {
             );
             flush_output();
         }
+    }
+
+    if let Some(default_minikube_tunnel_bind_address) = init_config.get("minikubeTunnelBindAddress")
+    {
+        let default_minikube_tunnel_bind_address = default_minikube_tunnel_bind_address
+            .as_str()
+            .expect("minikubeTunnelBindAddress must be a valid JSON string value")
+            .to_string();
+
+        print_results(
+            set_bind_address(default_minikube_tunnel_bind_address),
+            true,
+            true,
+        );
     }
 
     Ok(Some(init_file_path))
